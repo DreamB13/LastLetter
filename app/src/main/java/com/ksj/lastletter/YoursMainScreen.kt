@@ -2,6 +2,7 @@ package com.ksj.lastletter
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,14 +40,17 @@ fun YoursMainScreen() {
     var showDialog by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
-    val contacts = remember { mutableListOf<Contact>() }
+    val yours = remember { mutableStateListOf<Contact>() }
 
     LaunchedEffect(Unit) {
-        val contactRepository = ContactRepository()
-        val fetchedContacts = contactRepository.getContacts()
-        contacts.addAll(fetchedContacts)
+        try {
+            val contactRepository = ContactRepository()
+            val fetchedContacts = contactRepository.getContacts()
+            yours.addAll(fetchedContacts)
+        } catch (e: Exception) {
+            println("Error loading contacts: ${e.message}")
+        }
     }
-
     Surface(
         modifier = Modifier
             .fillMaxSize(),
@@ -64,18 +69,11 @@ fun YoursMainScreen() {
                 color = Color.Black,
                 modifier = Modifier.align(Alignment.Start)
             )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            InfoCard(text = "남편")
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            InfoCard("첫째 딸아이")
 
             Spacer(modifier = Modifier.height(32.dp))
-            contacts.forEach { contact ->
-                InfoCard(text = "${contact.name} (${contact.phoneNumber})")
-                Spacer(modifier = Modifier.height(8.dp))
+            yours.forEach { contact ->
+                InfoCard(text = contact.name)
+                Spacer(modifier = Modifier.height(16.dp))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -109,10 +107,17 @@ fun YoursMainScreen() {
                     },
                     confirmButton = {
                         Button(onClick = {
-                            // 여기서 Firebase에 데이터 저장
-                            val contactRepository = ContactRepository()
-                            contactRepository.addContact(Contact(name, phoneNumber))
-                            showDialog = false
+                            // Firebase에 데이터 저장
+                            try {
+                                val contactRepository = ContactRepository()
+                                contactRepository.addContact(Contact(name, phoneNumber))
+                                yours.add(Contact(name, phoneNumber))
+                                showDialog = false
+                                name = ""
+                                phoneNumber = ""
+                            } catch (e: Exception) {
+                                println("Error adding contact: ${e.message}")
+                            }
                         }) {
                             Text("저장")
                         }
@@ -153,6 +158,7 @@ fun InfoCard(text: String) {
 fun AddButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
+            .clickable(onClick = onClick)
             .size(width = 48.dp, height = 48.dp) // 라운드 직사각형 크기 설정
             .background(Color.White, shape = RoundedCornerShape(12.dp)) // 흰색 배경과 둥근 모서리 설정
             .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)), // 테두리 색상 설정
@@ -161,7 +167,7 @@ fun AddButton(onClick: () -> Unit) {
         Text(
             text = "+",
             fontSize = 24.sp,
-            color = Color(0xFFFFDCA8) // "+" 색상 설정
+            color = Color(0xFFFFDCA8),
         )
     }
 }

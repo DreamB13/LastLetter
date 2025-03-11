@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "730593225563",
+    "project_id": "nlpproject-25b00",
+    "storage_bucket": "nlpproject-25b00.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730593225563:android:e2a6b1f5e56ce2e29d887e",
+        "android_client_info": {
+          "package_name": "com.ksj.lastletter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtKDEAtLQm_QQIofWwVSaJbX9h0r5zV50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
