@@ -2,6 +2,9 @@ package com.ksj.lastletter
 
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class ContactRepository {
     private val db = FirebaseFirestore.getInstance()
@@ -17,23 +20,26 @@ class ContactRepository {
             }
     }
 
-    fun getContacts(): List<Contact> {
-        val yours = mutableListOf<Contact>()
-        // 비동기 작업이 완료될 때까지 대기하는 방법을 사용
-        val task = db.collection("Yours").get()
-
-        // 이 부분은 간단한 해결책으로, 실제로는 suspend 함수와 coroutine을 사용하는 것이 더 좋습니다
+    // 코루틴을 사용한 데이터 로드 메서드 추가
+    suspend fun getContactsWithCoroutines(): List<Contact> = withContext(Dispatchers.IO) {
         try {
-            val documents = Tasks.await(task)
-            for (document in documents) {
-                val contact = document.toObject(Contact::class.java)
-                yours.add(contact)
+            val querySnapshot = contactsRef.get().await()
+            val contacts = mutableListOf<Contact>()
+            for (document in querySnapshot.documents) {
+                try {
+                    val contact = document.toObject(Contact::class.java)
+                    if (contact != null) {
+                        contacts.add(contact)
+                    }
+                } catch (e: Exception) {
+                    println("Error converting document: ${e.message}")
+                }
             }
+            contacts
         } catch (e: Exception) {
             println("Error getting contacts: ${e.message}")
+            emptyList()
         }
-
-        return yours
     }
 
 }

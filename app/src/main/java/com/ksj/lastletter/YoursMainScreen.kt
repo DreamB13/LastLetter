@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 
 @Preview
@@ -41,14 +43,20 @@ fun YoursMainScreen() {
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     val yours = remember { mutableStateListOf<Contact>() }
+    val coroutineScope = rememberCoroutineScope()
 
+    // 코루틴 스코프로 데이터 로드
     LaunchedEffect(Unit) {
-        try {
-            val contactRepository = ContactRepository()
-            val fetchedContacts = contactRepository.getContacts()
-            yours.addAll(fetchedContacts)
-        } catch (e: Exception) {
-            println("Error loading contacts: ${e.message}")
+        coroutineScope.launch {
+            try {
+                val contactRepository = ContactRepository()
+                val fetchedContacts = contactRepository.getContactsWithCoroutines()
+                yours.clear()
+                yours.addAll(fetchedContacts)
+                println("Loaded ${fetchedContacts.size} contacts from Firestore")
+            } catch (e: Exception) {
+                println("Error loading contacts: ${e.message}")
+            }
         }
     }
     Surface(
@@ -87,13 +95,13 @@ fun YoursMainScreen() {
             if (showDialog) {
                 AlertDialog(
                     onDismissRequest = { showDialog = false },
-                    title = { Text("연락처 추가") },
+                    title = { Text("사용자 추가") },
                     text = {
                         Column {
                             TextField(
                                 value = name,
                                 onValueChange = { name = it },
-                                label = { Text("이름") },
+                                label = { Text("상대방 이름 (별명)") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -107,16 +115,19 @@ fun YoursMainScreen() {
                     },
                     confirmButton = {
                         Button(onClick = {
-                            // Firebase에 데이터 저장
-                            try {
-                                val contactRepository = ContactRepository()
-                                contactRepository.addContact(Contact(name, phoneNumber))
-                                yours.add(Contact(name, phoneNumber))
-                                showDialog = false
-                                name = ""
-                                phoneNumber = ""
-                            } catch (e: Exception) {
-                                println("Error adding contact: ${e.message}")
+                            // 코루틴 스코프로 데이터 저장
+                            coroutineScope.launch {
+                                try {
+                                    val contactRepository = ContactRepository()
+                                    val newContact = Contact(name, phoneNumber)
+                                    contactRepository.addContact(newContact)
+                                    yours.add(newContact)
+                                    showDialog = false
+                                    name = ""
+                                    phoneNumber = ""
+                                } catch (e: Exception) {
+                                    println("Error adding contact: ${e.message}")
+                                }
                             }
                         }) {
                             Text("저장")
