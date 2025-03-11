@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">LastLetter</string>
     <string name="client_id">711812313775-o0ogp6hl4l0t8esjdnmkp3oirphof6r4.apps.googleusercontent.com</string>
+    <string name="web_client_id">711812313775-shp06e33g2eefutdkpf5prdmh5sjcsg0.apps.googleusercontent.com</string>
 </resources>
