@@ -40,18 +40,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.launch
 
 
-@Preview
 @Composable
-fun YoursMainScreen() {
+fun YoursMainScreen(navController: NavHostController) {
     var showDialog by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var relationship by remember { mutableStateOf("") } // 관계 상태 추가
-    val relationships = listOf("배우자", "자녀", "부모", "연인", "친구")
-    val yours = remember { mutableStateListOf<Contact>() }
+    val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
+    val contacts = remember { mutableStateListOf<DocumentContact>() }
     val coroutineScope = rememberCoroutineScope()
 
     // 코루틴 스코프로 데이터 로드
@@ -60,8 +60,9 @@ fun YoursMainScreen() {
             try {
                 val contactRepository = ContactRepository()
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
-                yours.clear()
-                yours.addAll(fetchedContacts)
+                contacts.clear()
+                contacts.addAll(fetchedContacts)
+                println("Load contacts: ${fetchedContacts.size}")
             } catch (e: Exception) {
                 println("Error loading contacts: ${e.message}")
             }
@@ -87,17 +88,24 @@ fun YoursMainScreen() {
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-            yours.forEach { contact ->
-                InfoCard(text = contact.name)
+
+            contacts.forEach { documentContact ->
+                InfoCard(
+                    text = documentContact.contact.name,
+                    modifier = Modifier.clickable {
+                        println("Navigating to yoursContext/${documentContact.id}")
+                        navController.navigate("yoursContext/${documentContact.id}")
+                    }
+                )
                 Spacer(modifier = Modifier.height(16.dp))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                AddButton {
+                AddButton (onClick = {
                     showDialog = true
-                }
+                })
             }
 
             if (showDialog) {
@@ -150,7 +158,11 @@ fun YoursMainScreen() {
                                     val contactRepository = ContactRepository()
                                     val newContact = Contact(name, phoneNumber, relationship)
                                     contactRepository.addContact(newContact)
-                                    yours.add(newContact)
+
+                                    val updatedContacts =
+                                        contactRepository.getContactsWithCoroutines()
+                                    contacts.clear()
+                                    contacts.addAll(updatedContacts)
                                     showDialog = false
                                     name = ""
                                     phoneNumber = ""
@@ -224,9 +236,12 @@ fun RelationshipDropdown(
 
 
 @Composable
-fun InfoCard(text: String) {
+fun InfoCard(
+    text: String,
+    modifier:Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
             .background(

@@ -8,16 +8,36 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
-@Preview
 @Composable
-fun YoursContextScreen() {
+fun YoursContextScreen(contactId: String) {
+    val contact = remember { mutableStateOf<Contact?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Firestore에서 데이터 로드
+    LaunchedEffect(contactId) {
+        coroutineScope.launch { // 추가: 코루틴 스코프 사용
+            try {
+                val contactRepository = ContactRepository()
+                contact.value = contactRepository.getContactById(contactId)
+                println("연락처 로드 성공: ${contact.value?.name}")
+            } catch (e: Exception) {
+                println("연락처 로드 실패: ${e.message}")
+            }
+        }
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
@@ -29,53 +49,64 @@ fun YoursContextScreen() {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "첫째 딸아이",
-                    fontSize = 24.sp,
-                    color = Color.Black,
-                )
-                IconButton(onClick = { }) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = Color(0xFFFFDCA8)
+            contact.value?.let { contactData ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = contactData.name,
+                        fontSize = 24.sp,
+                        color = Color.Black,
                     )
+                    IconButton(onClick = { }) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit",
+                            tint = Color(0xFFFFDCA8)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                ContextAddButton()
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    ContextAddButton()
+                }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            val cardData = listOf(
-                Pair("1월 7일", "창 밖을 바라보다가"),
-                Pair("12월 4일", "설거지는 자기 전에"),
-                Pair("12월 2일", "햇살이 좋아서"),
-                Pair("11월 26일", "너가 어렸을 때"),
-                Pair("10월 7일", "바람이 차, 감기 조심")
-            )
+                val cardData = listOf(
+                    Pair("1월 7일", "창 밖을 바라보다가"),
+                    Pair("12월 4일", "설거지는 자기 전에"),
+                    Pair("12월 2일", "햇살이 좋아서"),
+                    Pair("11월 26일", "너가 어렸을 때"),
+                    Pair("10월 7일", "바람이 차, 감기 조심")
+                )
 
-            cardData.forEach { (date, text) ->
-                InfoCard(date, text)
-                Spacer(modifier = Modifier.height(8.dp))
+                cardData.forEach { (date, text) ->
+                    ContextInfoCard(date, text)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            } ?: run {
+                Text(
+                    text = "연락처를 찾을 수 없습니다.",
+                    fontSize = 20.sp,
+                    color = Color.Red,
+                    modifier = Modifier
+                        .padding(top = 32.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-fun InfoCard(date: String, text: String) {
+fun ContextInfoCard(date: String, text: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
