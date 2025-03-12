@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
                             navArgument("contactName") { type = NavType.StringType }
                         )
                     ) { backStackEntry ->
+                        val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
                         val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
                         RecordingScreen(navController = navController, contactName = contactName)
                     }
