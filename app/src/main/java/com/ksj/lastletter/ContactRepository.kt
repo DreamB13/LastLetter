@@ -50,5 +50,15 @@ class ContactRepository {
             null
         }
     }
+    suspend fun updateContact(documentId: String, contact: Contact): Boolean = withContext(Dispatchers.IO) {
+        try {
+            contactsRef.document(documentId).set(contact).await()
+            println("연락처 업데이트 성공: $documentId")
+            true
+        } catch (e: Exception) {
+            println("연락처 업데이트 실패: ${e.message}")
+            false
+        }
+    }
 }
 
