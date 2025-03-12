@@ -25,9 +25,18 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("contactId") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                        YoursContextScreen(contactId = contactId)
+                        YoursContextScreen(contactId = contactId, navController = navController)
                     }
-                    // 다른 화면 추가 가능
+                    composable(
+                        route = "recording/{contactId}/{contactName}",
+                        arguments = listOf(
+                            navArgument("contactId") { type = NavType.StringType },
+                            navArgument("contactName") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
+                        RecordingScreen(navController = navController, contactName = contactName)
+                    }
                 }
             }
         }

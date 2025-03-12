@@ -2,6 +2,7 @@ package com.ksj.lastletter
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,15 +22,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 
 @Composable
-fun YoursContextScreen(contactId: String) {
+fun YoursContextScreen(contactId: String, navController: NavController) {
     val contact = remember { mutableStateOf<Contact?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     var showEditDialog by remember { mutableStateOf(false) }
-    var editedName by remember { mutableStateOf("")}
+    var editedName by remember { mutableStateOf("") }
 
     // Firestore에서 데이터 로드
     LaunchedEffect(contactId) {
@@ -38,7 +40,7 @@ fun YoursContextScreen(contactId: String) {
                 val contactRepository = ContactRepository()
                 contact.value = contactRepository.getContactById(contactId)
                 println("연락처 로드 성공: ${contact.value?.name}")
-                contact.value?.let { editedName = it.name}
+                contact.value?.let { editedName = it.name }
             } catch (e: Exception) {
                 println("연락처 로드 실패: ${e.message}")
             }
@@ -86,80 +88,87 @@ fun YoursContextScreen(contactId: String) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    ContextAddButton()
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                val cardData = listOf(
-                    Pair("1월 7일", "창 밖을 바라보다가"),
-                    Pair("12월 4일", "설거지는 자기 전에"),
-                    Pair("12월 2일", "햇살이 좋아서"),
-                    Pair("11월 26일", "너가 어렸을 때"),
-                    Pair("10월 7일", "바람이 차, 감기 조심")
-                )
-
-                cardData.forEach { (date, text) ->
-                    ContextInfoCard(date, text)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            } ?: run {
-                Text(
-                    text = "연락처를 찾을 수 없습니다.",
-                    fontSize = 20.sp,
-                    color = Color.Red,
-                    modifier = Modifier
-                        .padding(top = 32.dp)
-                )
-            }
-            if (showEditDialog) {
-                AlertDialog(
-                    onDismissRequest = { showEditDialog = false },
-                    title = { Text("이름 수정") },
-                    text = {
-                        Column {
-                            TextField(
-                                value = editedName,
-                                onValueChange = { editedName = it },
-                                label = { Text("상대방 이름 (별명)") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        Button(onClick = {
-                            contact.value?.let { currentContact ->
-                                // 이름이 변경된 경우에만 업데이트
-                                if (editedName != currentContact.name && editedName.isNotBlank()) {
-                                    coroutineScope.launch {
-                                        try {
-                                            val contactRepository = ContactRepository()
-                                            // 업데이트된 Contact 객체 생성
-                                            val updatedContact = currentContact.copy(name = editedName)
-                                            // Firebase 업데이트
-                                            contactRepository.updateContact(contactId, updatedContact)
-                                            // 로컬 상태 업데이트
-                                            contact.value = updatedContact
-                                            showEditDialog = false
-                                        } catch (e: Exception) {
-                                            println("이름 업데이트 실패: ${e.message}")
-                                        }
-                                    }
-                                } else {
-                                    showEditDialog = false
-                                }
+                    ContextAddButton(
+                        onClick = {
+                            // 녹음 화면으로 네비게이션
+                            contact.value?.let { contactData ->
+                                navController.navigate("recording/${contactId}/${contactData.name}")
                             }
-                        }) {
-                            Text("저장")
                         }
-                    },
-                    dismissButton = {
-                        Button(onClick = { showEditDialog = false }) {
-                            Text("취소")
-                        }
-                    }
-                )
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val cardData = listOf(
+                Pair("1월 7일", "창 밖을 바라보다가"),
+                Pair("12월 4일", "설거지는 자기 전에"),
+                Pair("12월 2일", "햇살이 좋아서"),
+                Pair("11월 26일", "너가 어렸을 때"),
+                Pair("10월 7일", "바람이 차, 감기 조심")
+            )
+
+            cardData.forEach { (date, text) ->
+                ContextInfoCard(date, text)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        } ?: run {
+            Text(
+                text = "연락처를 찾을 수 없습니다.",
+                fontSize = 20.sp,
+                color = Color.Red,
+                modifier = Modifier
+                    .padding(top = 32.dp)
+            )
+        }
+        if (showEditDialog) {
+            AlertDialog(
+                onDismissRequest = { showEditDialog = false },
+                title = { Text("이름 수정") },
+                text = {
+                    Column {
+                        TextField(
+                            value = editedName,
+                            onValueChange = { editedName = it },
+                            label = { Text("상대방 이름 (별명)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        contact.value?.let { currentContact ->
+                            // 이름이 변경된 경우에만 업데이트
+                            if (editedName != currentContact.name && editedName.isNotBlank()) {
+                                coroutineScope.launch {
+                                    try {
+                                        val contactRepository = ContactRepository()
+                                        // 업데이트된 Contact 객체 생성
+                                        val updatedContact = currentContact.copy(name = editedName)
+                                        // Firebase 업데이트
+                                        contactRepository.updateContact(contactId, updatedContact)
+                                        // 로컬 상태 업데이트
+                                        contact.value = updatedContact
+                                        showEditDialog = false
+                                    } catch (e: Exception) {
+                                        println("이름 업데이트 실패: ${e.message}")
+                                    }
+                                }
+                            } else {
+                                showEditDialog = false
+                            }
+                        }
+                    }) {
+                        Text("저장")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showEditDialog = false }) {
+                        Text("취소")
+                    }
+                }
+            )
         }
     }
 }
@@ -200,9 +209,10 @@ fun ContextInfoCard(date: String, text: String) {
 }
 
 @Composable
-fun ContextAddButton() {
+fun ContextAddButton(onClick: () -> Unit = {}) {
     Box(
         modifier = Modifier
+            .clickable(onClick = onClick)
             .size(width = 48.dp, height = 48.dp)
             .background(Color.White, shape = RoundedCornerShape(12.dp))
             .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
