@@ -19,7 +19,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -113,14 +112,6 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 ContextInfoCard(date, text)
                 Spacer(modifier = Modifier.height(8.dp))
             }
-        } ?: run {
-            Text(
-                text = "연락처를 찾을 수 없습니다.",
-                fontSize = 20.sp,
-                color = Color.Red,
-                modifier = Modifier
-                    .padding(top = 32.dp)
-            )
         }
         if (showEditDialog) {
             AlertDialog(
