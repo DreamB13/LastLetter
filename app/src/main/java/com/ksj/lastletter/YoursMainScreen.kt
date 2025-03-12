@@ -14,8 +14,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -30,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +49,8 @@ fun YoursMainScreen() {
     var showDialog by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
+    var relationship by remember { mutableStateOf("") } // 관계 상태 추가
+    val relationships = listOf("배우자", "자녀", "부모", "연인", "친구")
     val yours = remember { mutableStateListOf<Contact>() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -53,7 +62,6 @@ fun YoursMainScreen() {
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
                 yours.clear()
                 yours.addAll(fetchedContacts)
-                println("Loaded ${fetchedContacts.size} contacts from Firestore")
             } catch (e: Exception) {
                 println("Error loading contacts: ${e.message}")
             }
@@ -95,9 +103,24 @@ fun YoursMainScreen() {
             if (showDialog) {
                 AlertDialog(
                     onDismissRequest = { showDialog = false },
-                    title = { Text("사용자 추가") },
+                    title = {
+                        Text(
+                            text = "사용자 추가",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    },
                     text = {
-                        Column {
+                        Column(
+                            modifier = Modifier
+                                .background(
+                                    Color(0xFFFFE4C4),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(16.dp)
+                        ) {
                             TextField(
                                 value = name,
                                 onValueChange = { name = it },
@@ -111,6 +134,12 @@ fun YoursMainScreen() {
                                 label = { Text("전화번호") },
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            RelationshipDropdown(
+                                relationships,
+                                selectedRelationship = relationship,
+                                onRelationshipSelected = { relationship = it }
+                            )
                         }
                     },
                     confirmButton = {
@@ -119,12 +148,13 @@ fun YoursMainScreen() {
                             coroutineScope.launch {
                                 try {
                                     val contactRepository = ContactRepository()
-                                    val newContact = Contact(name, phoneNumber)
+                                    val newContact = Contact(name, phoneNumber, relationship)
                                     contactRepository.addContact(newContact)
                                     yours.add(newContact)
                                     showDialog = false
                                     name = ""
                                     phoneNumber = ""
+                                    relationship = ""
                                 } catch (e: Exception) {
                                     println("Error adding contact: ${e.message}")
                                 }
@@ -143,6 +173,55 @@ fun YoursMainScreen() {
         }
     }
 }
+
+@Composable
+fun RelationshipDropdown(
+    relationships: List<String>,
+    selectedRelationship: String,
+    onRelationshipSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        TextField(
+            value = selectedRelationship,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("상대방과의 관계") },
+            trailingIcon = {
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFFFE4C4), shape = RoundedCornerShape(12.dp))
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Color(0xFFFFF4E6))
+        ) {
+            relationships.forEach { relationship ->
+                DropdownMenuItem(
+                    text = {  // 필수 text 파라미터 추가
+                        Text(
+                            text = relationship,
+                            fontSize = 16.sp,
+                            color = Color.Black
+                        )
+                    },
+                    onClick = {
+                        onRelationshipSelected(relationship)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun InfoCard(text: String) {
