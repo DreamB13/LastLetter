@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "2.0.21"
     id("com.google.gms.google-services")
+
 }
 
 android {
@@ -18,6 +19,21 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+        // properties가 없을 경우를 대비해 기본값을 빈 문자열로 처리
+        buildConfigField("String", "KAKAO_API_KEY", "\"${properties["KAKAO_API_KEY"] ?: ""}\"")
+        resValue("string", "KAKAO_API_KEY", "\"${properties["KAKAO_API_KEY"] ?: ""}\"")
+        buildConfigField("String", "KAKAO_REDIRECT_URI", "\"${properties["KAKAO_REDIRECT_URI"] ?: ""}\"")
+        resValue("string", "KAKAO_REDIRECT_URI", "\"${properties["KAKAO_REDIRECT_URI"] ?: ""}\"")
+        buildConfigField("String", "client_id", "\"${properties["client_id"] ?: ""}\"")
+        resValue("string", "client_id", "\"${properties["client_id"] ?: ""}\"")
+    }
+    buildFeatures {
+        buildConfig = true
+        // Compose 사용 시 활성화 (필요한 경우)
+        compose = true
     }
 
     buildTypes {
@@ -30,14 +46,13 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
+
+    // kotlinOptions는 별도의 블록으로 선언
     kotlinOptions {
-        jvmTarget = "11"
-    }
-    buildFeatures {
-        compose = true
+        jvmTarget = "1.8"
     }
 }
 
@@ -93,5 +108,8 @@ dependencies {
     // 코루틴 라이브러리
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    // 카카오 SDK (필요한 모듈만 선택하여 적용)
+    implementation ("com.kakao.sdk:v2-all:2.20.6")
 
 }
