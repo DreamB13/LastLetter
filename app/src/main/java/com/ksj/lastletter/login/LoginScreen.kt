@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.login
 
 
 import android.app.Application
@@ -25,7 +25,6 @@ import androidx.navigation.NavController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.gson.GsonBuilder
@@ -33,6 +32,7 @@ import com.kakao.sdk.common.KakaoSdk
 import com.kakao.sdk.common.model.ClientError
 import com.kakao.sdk.common.model.ClientErrorCause
 import com.kakao.sdk.user.UserApiClient
+import com.ksj.lastletter.R
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
@@ -153,7 +153,7 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
         )
         // 게스트 로그인 버튼
         Button(onClick = {
-            navController.navigate("yoursMain")
+            navController.navigate("Dayquestion")
         }) {
             Text(text = "게스트 로그인")
         }

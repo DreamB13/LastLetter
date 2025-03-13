@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ksj.lastletter.login.LoginScreen
 import com.ksj.lastletter.ui.theme.LastLetterTheme
 
 class MainActivity : ComponentActivity() {
@@ -47,6 +48,12 @@ class MainActivity : ComponentActivity() {
                     ) { backStackEntry ->
                         val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
                         RecordingScreen(navController = navController, contactName = contactName)
+                    }
+                    composable("dayquestion") {
+                        DayquestionScreen(navController = navController)
+                    }
+                    composable("settings") {
+                        SettingsScreen(navController = navController)
                     }
                 }
             }
