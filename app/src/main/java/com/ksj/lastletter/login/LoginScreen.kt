@@ -99,7 +99,7 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
     ) {
         // 구글 로그인 버튼
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_background), // 구글 로그인용 로고 리소스
+            painter = painterResource(id = R.drawable.android_light_rd_si), // 구글 로그인용 로고 리소스
             contentDescription = "Logo",
             modifier = Modifier.clickable {
                 val gso = GoogleSignInOptions
