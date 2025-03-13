@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.firebase
 
 data class DocumentContact(
     val id: String,

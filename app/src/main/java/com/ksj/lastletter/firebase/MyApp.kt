@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.firebase
 
 import android.app.Application
 import com.google.firebase.FirebaseApp

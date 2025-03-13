@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.firebase
 
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
