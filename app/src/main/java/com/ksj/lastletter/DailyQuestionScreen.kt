@@ -45,7 +45,7 @@ import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DayquestionScreen(navController: NavController) {
+fun DailyQuestionScreen(navController: NavController) {
     // 답변 입력 상태
     val answer = remember { mutableStateOf("") }
     val maxLength = 300
@@ -199,7 +199,9 @@ fun DayquestionScreen(navController: NavController) {
             // 저장하기 버튼
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { /* TODO: 저장 로직 */ },
+                onClick = {
+
+                },
                 modifier = Modifier.align(Alignment.End)
             ) {
                 Text("저장하기")
@@ -233,5 +235,5 @@ fun DayquestionScreen(navController: NavController) {
 @Preview(showBackground = true)
 @Composable
 fun DayquestionScreenPreview() {
-    DayquestionScreen(navController = NavController(context = LocalContext.current))
+    DailyQuestionScreen(navController = NavController(context = LocalContext.current))
 }

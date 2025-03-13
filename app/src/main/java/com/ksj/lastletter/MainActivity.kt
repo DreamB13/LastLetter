@@ -49,8 +49,8 @@ class MainActivity : ComponentActivity() {
                         val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
                         RecordingScreen(navController = navController, contactName = contactName)
                     }
-                    composable("dayquestion") {
-                        DayquestionScreen(navController = navController)
+                    composable("dailyQuestion") {
+                        DailyQuestionScreen(navController = navController)
                     }
                     composable("settings") {
                         SettingsScreen(navController = navController)

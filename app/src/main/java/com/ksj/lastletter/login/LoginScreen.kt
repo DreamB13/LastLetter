@@ -153,7 +153,7 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
         )
         // 게스트 로그인 버튼
         Button(onClick = {
-            navController.navigate("Dayquestion")
+            navController.navigate("dailyQuestion")
         }) {
             Text(text = "게스트 로그인")
         }
