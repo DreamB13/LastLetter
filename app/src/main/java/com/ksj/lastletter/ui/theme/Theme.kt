@@ -37,38 +37,34 @@ private val LightColors = lightColorScheme(
 
 @Composable
 fun LastLetterTheme(
-    textSizeOption: TextSizeOption = TextSizeOption.MEDIUM,
+    textSizeOption: TextSizeOption,
     content: @Composable () -> Unit
 ) {
-    // 선택된 텍스트 크기에 따라 Typography 설정
+    // 선택된 옵션에 따른 Typography 정의 (필요에 따라 다른 스타일도 추가)
     val typography = when (textSizeOption) {
         TextSizeOption.SMALL -> Typography(
             bodyLarge = TextStyle(fontSize = 12.sp),
             bodyMedium = TextStyle(fontSize = 12.sp),
-            bodySmall = TextStyle(fontSize = 12.sp),
-            labelLarge = TextStyle(fontSize = 12.sp)
+            bodySmall = TextStyle(fontSize = 12.sp)
         )
         TextSizeOption.MEDIUM -> Typography(
             bodyLarge = TextStyle(fontSize = 16.sp),
             bodyMedium = TextStyle(fontSize = 16.sp),
-            bodySmall = TextStyle(fontSize = 16.sp),
-            labelLarge = TextStyle(fontSize = 16.sp)
+            bodySmall = TextStyle(fontSize = 16.sp)
         )
         TextSizeOption.LARGE -> Typography(
             bodyLarge = TextStyle(fontSize = 20.sp),
             bodyMedium = TextStyle(fontSize = 20.sp),
-            bodySmall = TextStyle(fontSize = 20.sp),
-            labelLarge = TextStyle(fontSize = 20.sp)
+            bodySmall = TextStyle(fontSize = 20.sp)
         )
         TextSizeOption.EXTRA_LARGE -> Typography(
             bodyLarge = TextStyle(fontSize = 24.sp),
             bodyMedium = TextStyle(fontSize = 24.sp),
-            bodySmall = TextStyle(fontSize = 24.sp),
-            labelLarge = TextStyle(fontSize = 24.sp)
+            bodySmall = TextStyle(fontSize = 24.sp)
         )
     }
+
     MaterialTheme(
-        colorScheme = LightColors,
         typography = typography,
         content = content
     )

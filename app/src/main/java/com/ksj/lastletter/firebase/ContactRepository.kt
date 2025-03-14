@@ -60,5 +60,15 @@ class ContactRepository {
             false
         }
     }
+    suspend fun deleteContact(documentId: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            contactsRef.document(documentId).delete().await()
+            println("연락처 삭제 성공: $documentId")
+            true
+        } catch (e: Exception) {
+            println("연락처 삭제 실패: ${e.message}")
+            false
+        }
+    }
 }
 

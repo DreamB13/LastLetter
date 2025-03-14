@@ -3,6 +3,7 @@ package com.ksj.lastletter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
@@ -17,15 +18,20 @@ import com.ksj.lastletter.login.LoginScreen
 import com.ksj.lastletter.setting.SettingsScreen
 import com.ksj.lastletter.setting.TextSizeOption
 import com.ksj.lastletter.setting.TextSizeSettingScreen
+import com.ksj.lastletter.setting.getTextSizeOption
 import com.ksj.lastletter.ui.theme.LastLetterTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val context = LocalContext.current
             // 전역 텍스트 크기 상태 (필요에 따라 ViewModel로 관리 가능)
             var selectedTextSize by remember { mutableStateOf(TextSizeOption.MEDIUM) }
 
+            LaunchedEffect(Unit) {
+                selectedTextSize = getTextSizeOption(context)
+            }
             // 선택된 텍스트 크기에 따라 테마 적용
             LastLetterTheme(textSizeOption = selectedTextSize) {
                 val navController = rememberNavController()

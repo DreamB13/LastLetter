@@ -40,9 +40,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.PopUpToBuilder
+// Firebase Firestore 관련 import 추가
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +52,11 @@ fun DailyQuestionScreen(navController: NavController) {
     // 답변 입력 상태
     val answer = remember { mutableStateOf("") }
     val maxLength = 300
+
+    // 실제 질문 문구
+    val questionText = "내가 살면서 가장 행복했던 순간들은?"
+    // Firestore 인스턴스
+    val db: FirebaseFirestore = Firebase.firestore
 
     Scaffold(
         topBar = {
@@ -78,7 +85,6 @@ fun DailyQuestionScreen(navController: NavController) {
                             tint = Color.Black
                         )
                     }
-
                 },
             )
         },
@@ -116,7 +122,6 @@ fun DailyQuestionScreen(navController: NavController) {
                             contentDescription = "마이페이지"
                         )
                     },
-
                 )
                 NavigationBarItem(
                     selected = true,
@@ -139,7 +144,7 @@ fun DailyQuestionScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             // "NEW" + "오늘의 질문" 부분
-            Row(verticalAlignment = Alignment.CenterVertically,) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .background(Color(0xFFFFC107), shape = RoundedCornerShape(4.dp))
@@ -164,8 +169,8 @@ fun DailyQuestionScreen(navController: NavController) {
             // 실제 질문 문구
             Text(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                text = "내가 살면서 가장 행복했던 순간들은?", // 필요에 따라 수정
-                fontWeight = FontWeight.SemiBold
+                text = questionText,
+                fontWeight = FontWeight.SemiBold,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -194,11 +199,24 @@ fun DailyQuestionScreen(navController: NavController) {
                     .padding(top = 4.dp)
             )
 
-            // 저장하기 버튼
+            // 저장하기 버튼: 누르면 Firestore에 데이터 저장
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-
+                    val dailyQuestion = hashMapOf(
+                        "question" to questionText,
+                        "answer" to answer.value
+                    )
+                    db.collection("DailyQuestion")
+                        .add(dailyQuestion)
+                        .addOnSuccessListener {
+                            // 저장 성공 후 처리 (예: 메시지 표시, 입력 필드 초기화 등)
+                            answer.value = ""
+                        }
+                        .addOnFailureListener { exception ->
+                            // 에러 처리
+                            println("Error adding document: ${exception.message}")
+                        }
                 },
                 modifier = Modifier.align(Alignment.End)
             ) {
@@ -224,11 +242,13 @@ fun DailyQuestionScreen(navController: NavController) {
                 Text(
                     text = "편지를 써보는건 어때요?",
                     color = Color.Gray,
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
     }
 }
+
 @Preview(showBackground = true)
 @Composable
 fun DayquestionScreenPreview() {

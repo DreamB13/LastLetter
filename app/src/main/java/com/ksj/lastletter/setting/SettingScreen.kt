@@ -3,6 +3,7 @@ package com.ksj.lastletter.setting
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -222,6 +223,19 @@ fun SettingsScreen(navController: NavController) {
                         editingContact = null
                     }
                 }
+            },
+            onDelete = {
+                coroutineScope.launch {
+                    try {
+                        val contactRepository = ContactRepository()
+                        contactRepository.deleteContact(docContact.id)
+                        contacts.removeIf { it.id == docContact.id }
+                    } catch (e: Exception) {
+                        println("삭제 실패: ${e.message}")
+                    } finally {
+                        editingContact = null
+                    }
+                }
             }
         )
     }
@@ -268,7 +282,6 @@ fun DailyQuestionSelectionDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = documentContact.contact.name,
-                            fontSize = 16.sp,
                             color = Color.Black
                         )
                     }
@@ -317,15 +330,19 @@ fun ContactRow(documentContact: DocumentContact, onEditClick: () -> Unit) {
 fun EditContactDialog(
     documentContact: DocumentContact,
     onDismiss: () -> Unit,
-    onSave: (Contact) -> Unit
+    onSave: (Contact) -> Unit,
+    onDelete: () -> Unit  // 삭제 액션을 위한 콜백
 ) {
     var name by remember { mutableStateOf(documentContact.contact.name) }
     var phoneNumber by remember { mutableStateOf(documentContact.contact.phoneNumber) }
     var relationship by remember { mutableStateOf(documentContact.contact.relationship) }
+    // 삭제 확인 다이얼로그를 표시할지 여부 상태
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
+    // 편집 다이얼로그 (저장, 취소, 삭제 버튼 포함)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("연락처 수정") },
+        title = { Text("사용자 편집") },
         text = {
             Column {
                 TextField(
@@ -351,26 +368,53 @@ fun EditContactDialog(
             }
         },
         confirmButton = {
-            Button(onClick = {
-                if (name.isNotBlank()) {
-                    onSave(
-                        Contact(
-                            name = name,
-                            phoneNumber = phoneNumber,
-                            relationship = relationship
-                        )
-                    )
+            // 삭제, 취소, 저장 버튼을 한 줄에 배치
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(onClick = { showDeleteConfirmation = true }) {
+                    Text("삭제")
                 }
-            }) {
-                Text("저장")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
+                Button(onClick = onDismiss) {
+                    Text("취소")
+                }
+                Button(onClick = {
+                    if (name.isNotBlank()) {
+                        onSave(Contact(name, phoneNumber, relationship))
+                    }
+                }) {
+                    Text("저장")
+                }
             }
         }
     )
+
+    // 삭제 버튼 클릭 시 나타나는 확인 다이얼로그
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("삭제 확인") },
+            text = {
+                Text(
+                    "정말로 삭제 하시겠습니까?\n저장 되어 있던 정보(이름, 전화번호, 관계)와 작성한 편지가 모두 삭제됩니다"
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onDelete()
+                    showDeleteConfirmation = false
+                }) {
+                    Text("삭제")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDeleteConfirmation = false }) {
+                    Text("삭제 취소")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -382,9 +426,7 @@ fun Settiingitem(text: String, click: () -> Unit = {}) {
         }) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-
-            )
+        )
         Icon(
             modifier = Modifier
                 .align(Alignment.CenterEnd)

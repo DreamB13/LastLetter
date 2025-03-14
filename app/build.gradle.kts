@@ -112,4 +112,7 @@ dependencies {
     // 카카오 SDK (필요한 모듈만 선택하여 적용)
     implementation ("com.kakao.sdk:v2-all:2.20.6")
 
+    implementation("androidx.datastore:datastore-preferences:1.1.3")
+    implementation("androidx.datastore:datastore-preferences-core:1.1.3")
+
 }
