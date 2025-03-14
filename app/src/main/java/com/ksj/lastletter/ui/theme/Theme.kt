@@ -1,15 +1,13 @@
 package com.ksj.lastletter.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
+import com.ksj.lastletter.setting.TextSizeOption
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -32,27 +30,46 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF1C1B1F),
     */
 )
+// 기본 라이트 컬러 스킴 (필요에 따라 커스터마이징)
+private val LightColors = lightColorScheme(
+    // 예: primary = Color(0xFF6200EE), secondary = Color(0xFF03DAC6) 등
+)
 
 @Composable
 fun LastLetterTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    textSizeOption: TextSizeOption = TextSizeOption.MEDIUM,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    // 선택된 텍스트 크기에 따라 Typography 설정
+    val typography = when (textSizeOption) {
+        TextSizeOption.SMALL -> Typography(
+            bodyLarge = TextStyle(fontSize = 12.sp),
+            bodyMedium = TextStyle(fontSize = 12.sp),
+            bodySmall = TextStyle(fontSize = 12.sp),
+            labelLarge = TextStyle(fontSize = 12.sp)
+        )
+        TextSizeOption.MEDIUM -> Typography(
+            bodyLarge = TextStyle(fontSize = 16.sp),
+            bodyMedium = TextStyle(fontSize = 16.sp),
+            bodySmall = TextStyle(fontSize = 16.sp),
+            labelLarge = TextStyle(fontSize = 16.sp)
+        )
+        TextSizeOption.LARGE -> Typography(
+            bodyLarge = TextStyle(fontSize = 20.sp),
+            bodyMedium = TextStyle(fontSize = 20.sp),
+            bodySmall = TextStyle(fontSize = 20.sp),
+            labelLarge = TextStyle(fontSize = 20.sp)
+        )
+        TextSizeOption.EXTRA_LARGE -> Typography(
+            bodyLarge = TextStyle(fontSize = 24.sp),
+            bodyMedium = TextStyle(fontSize = 24.sp),
+            bodySmall = TextStyle(fontSize = 24.sp),
+            labelLarge = TextStyle(fontSize = 24.sp)
+        )
     }
-
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
+        colorScheme = LightColors,
+        typography = typography,
         content = content
     )
 }

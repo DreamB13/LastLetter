@@ -158,7 +158,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                 }
                 Text(
                     text = contactName,
-                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
@@ -201,7 +200,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             }
                         )
                         Spacer(modifier = Modifier.height(24.dp))
-                        Text(text = "클릭하면 녹음 시작", fontSize = 18.sp, color = Color.Black)
+                        Text(text = "클릭하면 녹음 시작", color = Color.Black)
                     }
                 }
             } else {
@@ -247,7 +246,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             RecordingState.STOPPED -> "녹음 완료"
                             else -> ""
                         },
-                        fontSize = 18.sp,
                         color = Color.Black
                     )
 

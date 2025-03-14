@@ -1,8 +1,9 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.setting
 
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,10 +14,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -77,7 +82,19 @@ fun SettingsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "설정") }
+                colors = TopAppBarDefaults.smallTopAppBarColors(
+                    containerColor = backgroundColor
+                ),
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowLeft,
+                            contentDescription = "뒤로가기",
+                            tint = Color.Black
+                        )
+                    }
+                },
+                title = { Text(text = "설정", color = Color.Black) },
             )
         }
     ) { innerPadding ->
@@ -99,7 +116,7 @@ fun SettingsScreen(navController: NavController) {
                     ) {
                         Text(
                             text = "일일질문 받을 사람 목록",
-                            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                            style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f)
                         )
                         IconButton(onClick = { showDailyQuestionSelectionDialog = true }) {
@@ -111,8 +128,9 @@ fun SettingsScreen(navController: NavController) {
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    val selectedNames = contacts.filter { selectedDailyQuestionContactIds.contains(it.id) }
-                        .joinToString { it.contact.name }
+                    val selectedNames =
+                        contacts.filter { selectedDailyQuestionContactIds.contains(it.id) }
+                            .joinToString { it.contact.name }
                     Text(
                         text = if (selectedNames.isEmpty()) "선택 없음" else selectedNames,
                         color = Color.Black,
@@ -152,27 +170,23 @@ fun SettingsScreen(navController: NavController) {
 
             // 아래 설정 메뉴 리스트 (글자 크기 변경, 문의하기, 제안하기)
             Column(modifier = Modifier.fillMaxWidth()) {
-                RowItem(
-                    title = "글자 크기 변경",
-                    onClick = { /* TODO: 글자 크기 변경 로직 */ }
-                )
-                Divider()
+                Settiingitem("글자 크기 변경", click = {
+                    navController.navigate("textSizeSetting")
+                })
+                Spacer(modifier = Modifier.width(8.dp))
+                Settiingitem("문의하기", click = {
+                    // 문의하기 클릭 시 처리
+                })
+                Spacer(modifier = Modifier.width(8.dp))
+                Settiingitem("제안하기", click = {
+                    // 제안하기 클릭 시 처리
+                })
 
-                RowItem(
-                    title = "문의하기",
-                    onClick = { /* TODO: 문의하기 로직 */ }
-                )
-                Divider()
-
-                RowItem(
-                    title = "제안하기",
-                    onClick = { /* TODO: 제안하기 로직 */ }
-                )
             }
         }
     }
 
-    // 일일질문 받을 사람 선택 다이얼로그
+// 일일질문 받을 사람 선택 다이얼로그
     if (showDailyQuestionSelectionDialog) {
         DailyQuestionSelectionDialog(
             contacts = contacts,
@@ -185,7 +199,7 @@ fun SettingsScreen(navController: NavController) {
         )
     }
 
-    // 편집 다이얼로그: 편지 받을 사람 편집은 기존과 동일하게 처리
+// 편집 다이얼로그: 편지 받을 사람 편집은 기존과 동일하게 처리
     editingContact?.let { docContact ->
         EditContactDialog(
             documentContact = docContact,
@@ -339,7 +353,13 @@ fun EditContactDialog(
         confirmButton = {
             Button(onClick = {
                 if (name.isNotBlank()) {
-                    onSave(Contact(name = name, phoneNumber = phoneNumber, relationship = relationship))
+                    onSave(
+                        Contact(
+                            name = name,
+                            phoneNumber = phoneNumber,
+                            relationship = relationship
+                        )
+                    )
                 }
             }) {
                 Text("저장")
@@ -354,24 +374,33 @@ fun EditContactDialog(
 }
 
 @Composable
-fun RowItem(title: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+fun Settiingitem(text: String, click: () -> Unit = {}) {
+    Box(modifier = Modifier
+        .fillMaxWidth(1f)
+        .clickable {
+            click()
+        }) {
         Text(
-            text = title,
+            text = text,
             style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-            modifier = Modifier.weight(1f)
-        )
+
+            )
         Icon(
-            imageVector = Icons.Default.Edit,
-            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(start = 8.dp),
+            imageVector = Icons.Default.KeyboardArrowRight,
+            contentDescription = text,
             tint = Color.Black
         )
     }
+
 }
 
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsScreenPreview() {
+    val navController = NavController(context = LocalContext.current)
+    SettingsScreen(navController = navController)
+}

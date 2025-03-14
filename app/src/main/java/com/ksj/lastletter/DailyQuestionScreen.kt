@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.PopUpToBuilder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +89,7 @@ fun DailyQuestionScreen(navController: NavController) {
             ) {
                 NavigationBarItem(
                     selected = true,
-                    onClick = { /* TODO: 네비게이션 로직 */ },
+                    onClick = { },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Edit,
@@ -98,7 +99,7 @@ fun DailyQuestionScreen(navController: NavController) {
                 )
                 NavigationBarItem(
                     selected = true,
-                    onClick = { /* TODO: 네비게이션 로직 */ },
+                    onClick = { navController.navigate("yoursMain") },
                     icon = {
                         Icon(
                             imageVector = Icons.Default.Email,
@@ -147,15 +148,13 @@ fun DailyQuestionScreen(navController: NavController) {
                     Text(
                         modifier = Modifier.align(Alignment.CenterStart),
                         text = "NEW",
-                        fontSize = 12.sp,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "오늘의 질문",
-                    style = MaterialTheme.typography.titleMedium, // 필요에 따라 수정
+                    text = "오늘의 질문", // 필요에 따라 수정
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -165,8 +164,7 @@ fun DailyQuestionScreen(navController: NavController) {
             // 실제 질문 문구
             Text(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                text = "내가 살면서 가장 행복했던 순간들은?",
-                style = MaterialTheme.typography.titleSmall, // 필요에 따라 수정
+                text = "내가 살면서 가장 행복했던 순간들은?", // 필요에 따라 수정
                 fontWeight = FontWeight.SemiBold
             )
 
@@ -226,7 +224,6 @@ fun DailyQuestionScreen(navController: NavController) {
                 Text(
                     text = "편지를 써보는건 어때요?",
                     color = Color.Gray,
-                    fontSize = 16.sp
                 )
             }
         }

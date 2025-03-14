@@ -22,6 +22,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -116,7 +117,6 @@ fun YoursMainScreen(navController: NavHostController) {
                     title = {
                         Text(
                             text = "사용자 추가",
-                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black,
                             modifier = Modifier.padding(bottom = 16.dp)
@@ -222,7 +222,6 @@ fun RelationshipDropdown(
                     text = {  // 필수 text 파라미터 추가
                         Text(
                             text = relationship,
-                            fontSize = 16.sp,
                             color = Color.Black
                         )
                     },
