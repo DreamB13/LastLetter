@@ -13,19 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -38,10 +32,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-// Firebase Firestore 관련 import 추가
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -49,101 +41,40 @@ import com.google.firebase.ktx.Firebase
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailyQuestionScreen(navController: NavController) {
-    // 답변 입력 상태
     val answer = remember { mutableStateOf("") }
     val maxLength = 300
-
-    // 실제 질문 문구
     val questionText = "내가 살면서 가장 행복했던 순간들은?"
-    // Firestore 인스턴스
     val db: FirebaseFirestore = Firebase.firestore
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Last Letter",
-                        color = Color.Black
-                    )
-                },
+                title = { Text(text = "Last Letter", color = Color.Black) },
                 actions = {
-                    // 우측 알림(벨) 아이콘
-                    IconButton(onClick = { /* TODO: 알림 아이콘 클릭 로직 */ }) {
+                    IconButton(onClick = { /* 알림 아이콘 클릭 로직 */ }) {
                         Icon(
-                            imageVector = Icons.Default.Notifications,
+                            imageVector = Icons.Filled.Notifications,
                             contentDescription = "알림 아이콘",
                             tint = Color.Black
                         )
                     }
-                    IconButton(onClick = {
-                        navController.navigate("settings") // 설정 화면으로 이동
-                    }) {
+                    IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = Icons.Filled.Settings,
                             contentDescription = "설정",
                             tint = Color.Black
                         )
                     }
-                },
+                }
             )
-        },
-        bottomBar = {
-            NavigationBar(
-                containerColor = Color.White,
-                tonalElevation = 4.dp
-            ) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "홈"
-                        )
-                    },
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { navController.navigate("yoursMain") },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "편지쓰기"
-                        )
-                    },
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { /* TODO: 네비게이션 로직 */ },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.AccountBox,
-                            contentDescription = "마이페이지"
-                        )
-                    },
-                )
-                NavigationBarItem(
-                    selected = true,
-                    onClick = { /* TODO: 네비게이션 로직 */ },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = "우리의 돈줄"
-                        )
-                    },
-                )
-            }
         }
     ) { innerPadding ->
-        // Scaffold 내에서 실제 화면을 구성하는 영역
         Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // "NEW" + "오늘의 질문" 부분
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -151,7 +82,6 @@ fun DailyQuestionScreen(navController: NavController) {
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        modifier = Modifier.align(Alignment.CenterStart),
                         text = "NEW",
                         color = Color.White,
                         fontWeight = FontWeight.Bold
@@ -159,29 +89,22 @@ fun DailyQuestionScreen(navController: NavController) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "오늘의 질문", // 필요에 따라 수정
-                    fontWeight = FontWeight.Bold,
+                    text = "오늘의 질문",
+                    fontWeight = FontWeight.Bold
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // 실제 질문 문구
             Text(
                 modifier = Modifier.align(Alignment.CenterHorizontally),
                 text = questionText,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.SemiBold
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // 답변 작성 영역
             OutlinedTextField(
                 value = answer.value,
                 onValueChange = {
-                    if (it.length <= maxLength) {
-                        answer.value = it
-                    }
+                    if (it.length <= maxLength) answer.value = it
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -189,43 +112,26 @@ fun DailyQuestionScreen(navController: NavController) {
                 placeholder = { Text("답변을 적어주세요") },
                 maxLines = 5
             )
-
-            // 글자 수 표시
             Text(
                 text = "${answer.value.length}/$maxLength 자",
-                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
                     .align(Alignment.End)
                     .padding(top = 4.dp)
             )
-
-            // 저장하기 버튼: 누르면 Firestore에 데이터 저장
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    val dailyQuestion = hashMapOf(
-                        "question" to questionText,
-                        "answer" to answer.value
-                    )
+                    val dailyQuestion = hashMapOf("question" to questionText, "answer" to answer.value)
                     db.collection("DailyQuestion")
                         .add(dailyQuestion)
-                        .addOnSuccessListener {
-                            // 저장 성공 후 처리 (예: 메시지 표시, 입력 필드 초기화 등)
-                            answer.value = ""
-                        }
+                        .addOnSuccessListener { answer.value = "" }
                         .addOnFailureListener { exception ->
-                            // 에러 처리
                             println("Error adding document: ${exception.message}")
                         }
                 },
                 modifier = Modifier.align(Alignment.End)
-            ) {
-                Text("저장하기")
-            }
-
+            ) { Text("저장하기") }
             Spacer(modifier = Modifier.height(24.dp))
-
-            // "편지를 써보는건 어때요?" 섹션
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -234,23 +140,16 @@ fun DailyQuestionScreen(navController: NavController) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Email,
+                    imageVector = Icons.Filled.Email,
                     contentDescription = "편지 아이콘",
                     tint = Color.Gray
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "편지를 써보는건 어때요?",
-                    color = Color.Gray,
-                    style = MaterialTheme.typography.bodyLarge
+                    color = Color.Gray
                 )
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DayquestionScreenPreview() {
-    DailyQuestionScreen(navController = NavController(context = LocalContext.current))
 }
