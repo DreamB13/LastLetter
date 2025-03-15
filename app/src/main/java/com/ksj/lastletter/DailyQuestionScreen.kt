@@ -57,7 +57,14 @@ fun DailyQuestionScreen(navController: NavController) {
                 colors = TopAppBarDefaults.smallTopAppBarColors(
                     containerColor = Color(0xFFFDFBF4),
                 ),
-                title = { Text(text = "Last Letter", color = Color.Black) },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(text = "Last Letter", color = Color.Black) }
+
+                },
                 actions = {
                     IconButton(onClick = { /* 알림 아이콘 클릭 로직 */ }) {
                         Icon(
@@ -115,7 +122,7 @@ fun DailyQuestionScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .background(Color( 0xFFFDFBF4), shape = RoundedCornerShape(8.dp))
+                    .background(Color(0xFFFDFBF4), shape = RoundedCornerShape(8.dp))
             )
             {
                 OutlinedTextField(
