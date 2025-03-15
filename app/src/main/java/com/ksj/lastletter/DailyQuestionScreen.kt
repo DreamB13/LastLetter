@@ -1,5 +1,6 @@
 package com.ksj.lastletter
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -47,6 +49,7 @@ fun DailyQuestionScreen(navController: NavController) {
     val maxLength = 300
     val questionText = "내가 살면서 가장 행복했던 순간들은?"
     val db: FirebaseFirestore = Firebase.firestore
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -108,25 +111,50 @@ fun DailyQuestionScreen(navController: NavController) {
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = answer.value,
-                onValueChange = {
-                    if (it.length <= maxLength) answer.value = it
-                },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp),
-                placeholder = {
-                    Text("답변을 적어주세요")
-                    Text(
-                        text = "${answer.value.length}/$maxLength 자",
-                        modifier = Modifier
-                            .align(Alignment.End)
-                            .padding(top = 4.dp)
-                    )
-                },
-                maxLines = 5
+                    .height(300.dp)
+                    .background(Color( 0xFFFDFBF4), shape = RoundedCornerShape(8.dp))
             )
+            {
+                OutlinedTextField(
+                    value = answer.value,
+                    onValueChange = {
+                        if (it.length <= maxLength) answer.value = it
+                        // maxLength 를 초과 하면 토스트 메세지 띄우기
+                        else {
+                            Toast.makeText(
+                                context,
+                                "최대 $maxLength 자까지 입력 가능합니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp),
+                    placeholder = {
+                        Text("답변을 적어주세요")
+                    },
+                    // outlinedTextField의 스타일을 설정합니다.
+                    shape = RoundedCornerShape(8.dp),
+                    maxLines = 5,
+                    colors = TextFieldDefaults.outlinedTextFieldColors(
+                        focusedBorderColor = Color(0xFFFE8F2E),
+                        unfocusedBorderColor = Color(0xFFFE8F2E),
+                    ),
+                )
+                Text(
+                    text = "${answer.value.length}/$maxLength 자",
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .align(Alignment.BottomEnd)
+                )
+
+
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
             Button(
