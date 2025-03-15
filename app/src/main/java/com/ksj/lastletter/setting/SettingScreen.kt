@@ -2,12 +2,14 @@ package com.ksj.lastletter.setting
 
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +22,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,15 +66,21 @@ fun SettingsScreen(navController: NavController) {
     var selectedDailyQuestionContactIds by remember { mutableStateOf<List<String>>(emptyList()) }
     // 일일질문 받을 사람 선택 다이얼로그 표시 여부
     var showDailyQuestionSelectionDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) } // 삭제 확인 다이얼로그 표시 여부
+    // 일일질문 받을 사람 선택 다이얼로그에서 선택된 연락처 ID 목록
+    val selectedContactIds = remember { mutableStateListOf<String>() }
 
     // Firebase로부터 연락처 목록 로드
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
                 val contactRepository = ContactRepository()
+                val dailyQuestionContactIds = contactRepository.getDailyQuestionContactIds()
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
                 contacts.clear()
                 contacts.addAll(fetchedContacts)
+                // 초기 선택된 연락처 ID 목록을 Firebase에서 가져옴
+                selectedDailyQuestionContactIds = dailyQuestionContactIds
             } catch (e: Exception) {
                 println("Error loading contacts: ${e.message}")
             }
@@ -78,9 +88,12 @@ fun SettingsScreen(navController: NavController) {
     }
 
     // 전체 배경색(연한 크림색 계열)
-    val backgroundColor = Color(0xFFFFFBEF)
+    val backgroundColor = Color(0xFFFDFBF4)
 
     Scaffold(
+        modifier = Modifier
+            .background(backgroundColor)
+            .fillMaxSize(),
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.smallTopAppBarColors(
@@ -102,13 +115,18 @@ fun SettingsScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
+                .background(backgroundColor)
+                .fillMaxSize()
         ) {
             // 첫 번째 박스: 일일질문 받을 사람 목록 (다이얼로그로 복수 선택)
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(2.dp, Color(0xFF9AD28A)),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(2.dp, Color(0xFFE2FFDE)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFE2FFDE) // 카드 배경색
+                )
+
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -132,26 +150,36 @@ fun SettingsScreen(navController: NavController) {
                     val selectedNames =
                         contacts.filter { selectedDailyQuestionContactIds.contains(it.id) }
                             .joinToString { it.contact.name }
-                    Text(
-                        text = if (selectedNames.isEmpty()) "선택 없음" else selectedNames,
-                        color = Color.Black,
-                        fontSize = 16.sp
-                    )
+                    // 선택된 사람 이름을 보여줌
+                    if (selectedNames.isEmpty()) {
+                        Text(text = "선택된 사람이 없습니다.")
+                    } else {
+                        contacts.forEach { documentContact ->
+                            // 선택된 사람이 있다면 db에서 가져온 연락처 목록을 보여줌
+                            if (selectedDailyQuestionContactIds.contains(documentContact.id)) {
+                                Text(
+                                    text = documentContact.contact.name,
+                                    color = Color.Black
+                                )
+                            }
+                        }
+                    }
+
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
             // 두 번째 박스: 편지 받을 사람 목록 (기존 편집 기능 유지)
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(2.dp, Color(0xFFB8A0EA))
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(2.dp, Color(0xFFE9EAFF)),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFE9EAFF) // 카드 배경색
+                )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "편지 받을 사람 목록",
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     if (contacts.isEmpty()) {
@@ -196,6 +224,15 @@ fun SettingsScreen(navController: NavController) {
             onSave = { newSelectedIds ->
                 selectedDailyQuestionContactIds = newSelectedIds
                 showDailyQuestionSelectionDialog = false
+                // 선택된 연락처 ID를 Firebase에 저장하는 로직 추가
+                coroutineScope.launch {
+                    try {
+                        val contactRepository = ContactRepository()
+                        contactRepository.updateDailyQuestionContacts(newSelectedIds)
+                    } catch (e: Exception) {
+                        println("Error saving selected contacts: ${e.message}")
+                    }
+                }
             }
         )
     }

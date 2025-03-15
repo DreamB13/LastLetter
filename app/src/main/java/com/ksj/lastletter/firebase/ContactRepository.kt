@@ -70,5 +70,34 @@ class ContactRepository {
             false
         }
     }
+
+    fun updateDailyQuestionContacts(newSelectedIds: List<String>) {
+        val dailyQuestionRef = db.collection("DailyQuestion").document("selectedContacts")
+        dailyQuestionRef.set(mapOf("selectedIds" to newSelectedIds))
+            .addOnSuccessListener {
+                println("Daily question contacts updated successfully.")
+            }
+            .addOnFailureListener { e ->
+                println("Error updating daily question contacts: $e")
+            }
+    }
+
+    fun getDailyQuestionContactIds(): List<String> {
+        val dailyQuestionRef = db.collection("DailyQuestion").document("selectedContacts")
+        var selectedIds: List<String> = emptyList()
+        dailyQuestionRef.get()
+            .addOnSuccessListener { document ->
+                if (document != null) {
+                    selectedIds = document.get("selectedIds") as List<String>
+                } else {
+                    println("No such document")
+                }
+            }
+            .addOnFailureListener { e ->
+                println("Error getting document: $e")
+            }
+        return selectedIds
+
+    }
 }
 

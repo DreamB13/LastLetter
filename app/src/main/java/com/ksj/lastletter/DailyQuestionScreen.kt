@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.firestore.FirebaseFirestore
@@ -49,6 +51,9 @@ fun DailyQuestionScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.smallTopAppBarColors(
+                    containerColor = Color(0xFFFDFBF4),
+                ),
                 title = { Text(text = "Last Letter", color = Color.Black) },
                 actions = {
                     IconButton(onClick = { /* 알림 아이콘 클릭 로직 */ }) {
@@ -71,11 +76,12 @@ fun DailyQuestionScreen(navController: NavController) {
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(innerPadding)
+                .background(Color(0xFFFDFBF4)),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.weight(1f))
                 Box(
                     modifier = Modifier
                         .background(Color(0xFFFFC107), shape = RoundedCornerShape(4.dp))
@@ -92,6 +98,7 @@ fun DailyQuestionScreen(navController: NavController) {
                     text = "오늘의 질문",
                     fontWeight = FontWeight.Bold
                 )
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -109,19 +116,23 @@ fun DailyQuestionScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp),
-                placeholder = { Text("답변을 적어주세요") },
+                placeholder = {
+                    Text("답변을 적어주세요")
+                    Text(
+                        text = "${answer.value.length}/$maxLength 자",
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(top = 4.dp)
+                    )
+                },
                 maxLines = 5
             )
-            Text(
-                text = "${answer.value.length}/$maxLength 자",
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 4.dp)
-            )
+
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-                    val dailyQuestion = hashMapOf("question" to questionText, "answer" to answer.value)
+                    val dailyQuestion =
+                        hashMapOf("question" to questionText, "answer" to answer.value)
                     db.collection("DailyQuestion")
                         .add(dailyQuestion)
                         .addOnSuccessListener { answer.value = "" }
@@ -152,4 +163,10 @@ fun DailyQuestionScreen(navController: NavController) {
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun DailyQuestionScreenPreview() {
+    DailyQuestionScreen(navController = NavController(LocalContext.current))
 }
