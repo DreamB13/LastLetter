@@ -120,7 +120,9 @@ fun SettingsScreen(navController: NavController) {
         ) {
             // 첫 번째 박스: 일일질문 받을 사람 목록 (다이얼로그로 복수 선택)
             Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(2.dp, Color(0xFFE2FFDE)),
                 colors = CardDefaults.cardColors(
@@ -170,7 +172,9 @@ fun SettingsScreen(navController: NavController) {
 
             // 두 번째 박스: 편지 받을 사람 목록 (기존 편집 기능 유지)
             Card(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(2.dp, Color(0xFFE9EAFF)),
                 colors = CardDefaults.cardColors(
@@ -202,11 +206,11 @@ fun SettingsScreen(navController: NavController) {
                 Settiingitem("글자 크기 변경", click = {
                     navController.navigate("textSizeSetting")
                 })
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("문의하기", click = {
                     // 문의하기 클릭 시 처리
                 })
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("제안하기", click = {
                     // 제안하기 클릭 시 처리
                 })
@@ -457,7 +461,9 @@ fun EditContactDialog(
 @Composable
 fun Settiingitem(text: String, click: () -> Unit = {}) {
     Box(modifier = Modifier
-        .fillMaxWidth(1f)
+        .fillMaxWidth()
+        .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
+        .padding(16.dp)
         .clickable {
             click()
         }) {

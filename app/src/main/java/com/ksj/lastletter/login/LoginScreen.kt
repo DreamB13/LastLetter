@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
@@ -47,9 +48,9 @@ class GlobalApplication : Application() {
 
 
 class RetrofitInstance {
-    companion object{
+    companion object {
         val BASE_URL = "https://sample.com/oauth"
-        fun getRetrofitInstance() : Retrofit {
+        fun getRetrofitInstance(): Retrofit {
             return Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create(GsonBuilder().create()))
@@ -62,8 +63,6 @@ class RetrofitInstance {
         }
     }
 }
-
-
 
 
 @Composable
@@ -101,15 +100,18 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
         Image(
             painter = painterResource(id = R.drawable.android_light_rd_si), // 구글 로그인용 로고 리소스
             contentDescription = "Logo",
-            modifier = Modifier.clickable {
-                val gso = GoogleSignInOptions
-                    .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken(token)
-                    .requestEmail()
-                    .build()
-                val googleSignInClient = GoogleSignIn.getClient(localContext, gso)
-                launcher.launch(googleSignInClient.signInIntent)
-            }
+            modifier = Modifier
+                .clickable {
+                    val gso = GoogleSignInOptions
+                        .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                        .requestIdToken(token)
+                        .requestEmail()
+                        .build()
+                    val googleSignInClient = GoogleSignIn.getClient(localContext, gso)
+                    launcher.launch(googleSignInClient.signInIntent)
+                }
+                .height(50.dp)
+                .fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(32.dp))
         // 카카오 로그인 버튼 (이미지)
@@ -117,7 +119,8 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
             painter = painterResource(id = R.drawable.kakao_login_medium_narrow), // 카카오 로그인용 로고 리소스
             contentDescription = "Kakao Login",
             modifier = Modifier
-                .size(120.dp)
+                .fillMaxWidth()
+                .height(50.dp)
                 .clickable {
                     // 카카오톡 앱을 통한 로그인 시도
                     if (UserApiClient.instance.isKakaoTalkLoginAvailable(localContext)) {
@@ -130,7 +133,10 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
                                 // 카카오톡 로그인 실패 시 카카오계정으로 로그인 시도
                                 UserApiClient.instance.loginWithKakaoAccount(localContext) { token, error ->
                                     if (error != null) {
-                                        Log.e("KakaoLogin", "Kakao account login failed: ${error.message}")
+                                        Log.e(
+                                            "KakaoLogin",
+                                            "Kakao account login failed: ${error.message}"
+                                        )
                                     } else if (token != null) {
                                         navController.navigate("yoursMain")
                                     }
@@ -151,10 +157,17 @@ fun LoginScreen(navController: NavController, loginAction: () -> Unit, context: 
                     }
                 }
         )
+        Spacer(modifier = Modifier.height(32.dp))
+
         // 게스트 로그인 버튼
-        Button(onClick = {
-            navController.navigate("dailyQuestion")
-        }) {
+        Button(
+            onClick = {
+                navController.navigate("dailyQuestion")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+        ) {
             Text(text = "게스트 로그인")
         }
     }
