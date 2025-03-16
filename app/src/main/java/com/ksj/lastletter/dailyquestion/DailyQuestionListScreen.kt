@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.dailyquestion
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.dailyquestion
 
 enum class DailyQuestion(val question: String) {
     QUESTION_1("가장 기억에 남는 친구와의 추억은?"),

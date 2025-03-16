@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.dailyquestion
 
 import android.widget.Toast
 import androidx.compose.foundation.background

@@ -21,6 +21,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.ksj.lastletter.dailyquestion.DailyQuestionDetail
+import com.ksj.lastletter.dailyquestion.DailyQuestionListScreen
+import com.ksj.lastletter.dailyquestion.DailyQuestionScreen
 import com.ksj.lastletter.login.LoginScreen
 import com.ksj.lastletter.setting.SettingsScreen
 import com.ksj.lastletter.setting.TextSizeOption
