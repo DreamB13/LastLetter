@@ -29,6 +29,7 @@ import com.ksj.lastletter.setting.SettingsScreen
 import com.ksj.lastletter.setting.TextSizeOption
 import com.ksj.lastletter.setting.TextSizeSettingScreen
 import com.ksj.lastletter.setting.getTextSizeOption
+import com.ksj.lastletter.ui.MyPageScreen
 import com.ksj.lastletter.ui.theme.LastLetterTheme
 
 class MainActivity : ComponentActivity() {
@@ -101,8 +102,8 @@ class MainActivity : ComponentActivity() {
                             val docId = backStackEntry.arguments?.getString("docId") ?: ""
                             DailyQuestionDetail(navController = navController, docId = docId)
                         }
-                        composable("shopping") {
-                            DummyScreen(title = "우리의 돈줄")
+                        composable("myPage") {
+                            MyPageScreen(navController = navController)
                         }
                     }
                 }
@@ -150,8 +151,8 @@ fun BottomNavigationBar(navController: NavController) {
             }
         )
         NavigationBarItem(
-            selected = currentRoute == "shopping",
-            onClick = { navController.navigate("shopping") },
+            selected = currentRoute == "myPage",
+            onClick = { navController.navigate("myPage") },
             icon = {
                 Icon(
                     imageVector = Icons.Filled.ShoppingCart,
