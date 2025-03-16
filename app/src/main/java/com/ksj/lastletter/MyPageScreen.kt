@@ -60,7 +60,7 @@ fun MyPageScreen(navController: NavController) {
                             tint = Color.Black
                         )
                     }
-                    IconButton(onClick = { /* 설정 아이콘 클릭 처리 */ }) {
+                    IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "설정",
