@@ -117,3 +117,4 @@ class ContactRepository {
         return selectedIds
     }
 }
+
