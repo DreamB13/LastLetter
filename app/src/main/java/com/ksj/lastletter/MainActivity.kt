@@ -3,26 +3,14 @@ package com.ksj.lastletter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -52,7 +40,6 @@ class MainActivity : ComponentActivity() {
             }
             LastLetterTheme(textSizeOption = selectedTextSize) {
                 val navController = rememberNavController()
-                // 전역 Scaffold에 하단 네비게이션 바 추가
                 Scaffold(
                     bottomBar = { BottomNavigationBar(navController = navController) }
                 ) { innerPadding ->
@@ -75,11 +62,11 @@ class MainActivity : ComponentActivity() {
                             YoursMainScreen(navController = navController)
                         }
                         composable(
-                            route = "yoursContext/ {contactId}",
+                            route = "yoursContext/{contactId}",
                             arguments = listOf(navArgument("contactId") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                            YoursContextScreen(contactId = contactId, navController = navController)
+                            DummyScreen(title = "YoursContext: $contactId")
                         }
                         composable(
                             route = "recording/{contactId}/{contactName}",
@@ -89,7 +76,7 @@ class MainActivity : ComponentActivity() {
                             )
                         ) { backStackEntry ->
                             val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
-                            RecordingScreen(navController = navController, contactName = contactName)
+                            DummyScreen(title = "Recording: $contactName")
                         }
                         composable("settings") {
                             SettingsScreen(navController = navController)
@@ -101,9 +88,15 @@ class MainActivity : ComponentActivity() {
                                 onTextSizeChange = { newSize -> selectedTextSize = newSize }
                             )
                         }
-                        // 더미 화면: 마이페이지와 우리의 돈줄 (추후 실제 화면으로 대체 가능)
-                        composable("profile") {
-                            DummyScreen(title = "마이페이지")
+                        composable("dailyQuestionList") {
+                            DailyQuestionListScreen(navController = navController)
+                        }
+                        composable(
+                            route = "dailyQuestionDetail/{docId}",
+                            arguments = listOf(navArgument("docId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val docId = backStackEntry.arguments?.getString("docId") ?: ""
+                            DailyQuestionDetail(navController = navController, docId = docId)
                         }
                         composable("shopping") {
                             DummyScreen(title = "우리의 돈줄")
@@ -117,11 +110,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
-    // 현재 선택된 경로 확인
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     NavigationBar(
-        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 4.dp
     ) {
         NavigationBarItem(
@@ -145,12 +137,12 @@ fun BottomNavigationBar(navController: NavController) {
             }
         )
         NavigationBarItem(
-            selected = currentRoute == "profile",
-            onClick = { navController.navigate("profile") },
+            selected = currentRoute == "dailyQuestionList",
+            onClick = { navController.navigate("dailyQuestionList") },
             icon = {
                 Icon(
                     imageVector = Icons.Filled.AccountBox,
-                    contentDescription = "마이페이지"
+                    contentDescription = "일일질문목록"
                 )
             }
         )

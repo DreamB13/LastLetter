@@ -34,9 +34,7 @@ import androidx.datastore.preferences.core.edit
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
-// DataStore 설정 (Context에 확장 속성으로 추가)
 val Context.dataStore by preferencesDataStore(name = "settings")
-// 저장 키
 val TEXT_SIZE_OPTION_KEY = stringPreferencesKey("text_size_option")
 
 suspend fun saveTextSizeOption(context: Context, option: TextSizeOption) {
@@ -51,7 +49,6 @@ suspend fun getTextSizeOption(context: Context): TextSizeOption {
     return TextSizeOption.valueOf(optionName)
 }
 
-// 텍스트 크기 옵션 enum (한글 레이블 포함)
 enum class TextSizeOption(val label: String) {
     SMALL("작게"),
     MEDIUM("보통"),

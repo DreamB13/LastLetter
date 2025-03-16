@@ -1,6 +1,5 @@
 package com.ksj.lastletter.setting
 
-
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,7 +21,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,10 +43,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
@@ -57,29 +55,21 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController) {
-    // Firebase에서 불러온 연락처 상태
     val contacts = remember { mutableStateListOf<DocumentContact>() }
     val coroutineScope = rememberCoroutineScope()
-    // 편집 중인 연락처 상태 (편지 받을 사람 목록은 기존처럼 편집 다이얼로그로 수정 가능)
     var editingContact by remember { mutableStateOf<DocumentContact?>(null) }
-    // 일일질문 받을 사람 선택 상태 (선택한 연락처의 id 목록)
     var selectedDailyQuestionContactIds by remember { mutableStateOf<List<String>>(emptyList()) }
-    // 일일질문 받을 사람 선택 다이얼로그 표시 여부
     var showDailyQuestionSelectionDialog by remember { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) } // 삭제 확인 다이얼로그 표시 여부
-    // 일일질문 받을 사람 선택 다이얼로그에서 선택된 연락처 ID 목록
     val selectedContactIds = remember { mutableStateListOf<String>() }
 
-    // Firebase로부터 연락처 목록 로드
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
                 val contactRepository = ContactRepository()
-                val dailyQuestionContactIds = contactRepository.getDailyQuestionContactIds()
+                val dailyQuestionContactIds = contactRepository.getDailyQuestionContactIds() ?: emptyList()
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
                 contacts.clear()
                 contacts.addAll(fetchedContacts)
-                // 초기 선택된 연락처 ID 목록을 Firebase에서 가져옴
                 selectedDailyQuestionContactIds = dailyQuestionContactIds
             } catch (e: Exception) {
                 println("Error loading contacts: ${e.message}")
@@ -87,7 +77,6 @@ fun SettingsScreen(navController: NavController) {
         }
     }
 
-    // 전체 배경색(연한 크림색 계열)
     val backgroundColor = Color(0xFFFDFBF4)
 
     Scaffold(
@@ -118,7 +107,6 @@ fun SettingsScreen(navController: NavController) {
                 .background(backgroundColor)
                 .fillMaxSize()
         ) {
-            // 첫 번째 박스: 일일질문 받을 사람 목록 (다이얼로그로 복수 선택)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -126,9 +114,8 @@ fun SettingsScreen(navController: NavController) {
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(2.dp, Color(0xFFE2FFDE)),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE2FFDE) // 카드 배경색
+                    containerColor = Color(0xFFE2FFDE)
                 )
-
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -152,12 +139,10 @@ fun SettingsScreen(navController: NavController) {
                     val selectedNames =
                         contacts.filter { selectedDailyQuestionContactIds.contains(it.id) }
                             .joinToString { it.contact.name }
-                    // 선택된 사람 이름을 보여줌
                     if (selectedNames.isEmpty()) {
                         Text(text = "선택된 사람이 없습니다.")
                     } else {
                         contacts.forEach { documentContact ->
-                            // 선택된 사람이 있다면 db에서 가져온 연락처 목록을 보여줌
                             if (selectedDailyQuestionContactIds.contains(documentContact.id)) {
                                 Text(
                                     text = documentContact.contact.name,
@@ -166,11 +151,9 @@ fun SettingsScreen(navController: NavController) {
                             }
                         }
                     }
-
                 }
             }
 
-            // 두 번째 박스: 편지 받을 사람 목록 (기존 편집 기능 유지)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -178,19 +161,16 @@ fun SettingsScreen(navController: NavController) {
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(2.dp, Color(0xFFE9EAFF)),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE9EAFF) // 카드 배경색
+                    containerColor = Color(0xFFE9EAFF)
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "편지 받을 사람 목록",
-                    )
+                    Text(text = "편지 받을 사람 목록")
                     Spacer(modifier = Modifier.height(8.dp))
                     if (contacts.isEmpty()) {
                         Text(text = "목록이 비어 있습니다.")
                     } else {
                         contacts.forEachIndexed { index, documentContact ->
-                            // 각 항목을 Row로 구성하여 이름과 편집 버튼 표시
                             ContactRow(documentContact = documentContact) {
                                 editingContact = documentContact
                             }
@@ -201,25 +181,29 @@ fun SettingsScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 아래 설정 메뉴 리스트 (글자 크기 변경, 문의하기, 제안하기)
             Column(modifier = Modifier.fillMaxWidth()) {
                 Settiingitem("글자 크기 변경", click = {
                     navController.navigate("textSizeSetting")
                 })
                 Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("문의하기", click = {
-                    // 문의하기 클릭 시 처리
+                    // 문의하기 처리
                 })
                 Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("제안하기", click = {
-                    // 제안하기 클릭 시 처리
+                    // 제안하기 처리
                 })
-
+                Spacer(modifier = Modifier.height(8.dp))
+                Settiingitem("로그아웃", click = {
+                    FirebaseAuth.getInstance().signOut()
+                    navController.navigate("login") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                })
             }
         }
     }
 
-// 일일질문 받을 사람 선택 다이얼로그
     if (showDailyQuestionSelectionDialog) {
         DailyQuestionSelectionDialog(
             contacts = contacts,
@@ -228,7 +212,6 @@ fun SettingsScreen(navController: NavController) {
             onSave = { newSelectedIds ->
                 selectedDailyQuestionContactIds = newSelectedIds
                 showDailyQuestionSelectionDialog = false
-                // 선택된 연락처 ID를 Firebase에 저장하는 로직 추가
                 coroutineScope.launch {
                     try {
                         val contactRepository = ContactRepository()
@@ -241,7 +224,6 @@ fun SettingsScreen(navController: NavController) {
         )
     }
 
-// 편집 다이얼로그: 편지 받을 사람 편집은 기존과 동일하게 처리
     editingContact?.let { docContact ->
         EditContactDialog(
             documentContact = docContact,
@@ -252,7 +234,6 @@ fun SettingsScreen(navController: NavController) {
                         val contactRepository = ContactRepository()
                         val success = contactRepository.updateContact(docContact.id, updatedContact)
                         if (success) {
-                            // 로컬 contacts 리스트 업데이트
                             val index = contacts.indexOfFirst { it.id == docContact.id }
                             if (index != -1) {
                                 contacts[index] = DocumentContact(docContact.id, updatedContact)
@@ -289,7 +270,6 @@ fun DailyQuestionSelectionDialog(
     onDismiss: () -> Unit,
     onSave: (List<String>) -> Unit
 ) {
-    // 로컬 선택 상태 (복사본)
     var tempSelectedIds by remember { mutableStateOf(initialSelectedIds.toMutableList()) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -306,13 +286,11 @@ fun DailyQuestionSelectionDialog(
                                 } else {
                                     tempSelectedIds.add(documentContact.id)
                                 }
-                                // 변경된 리스트로 재할당해서 recomposition 강제
                                 tempSelectedIds = tempSelectedIds.toMutableList()
                             }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // onClick은 null로 처리하여 Row의 clickable이 실행되게 함
                         androidx.compose.material3.RadioButton(
                             selected = tempSelectedIds.contains(documentContact.id),
                             onClick = null,
@@ -372,15 +350,13 @@ fun EditContactDialog(
     documentContact: DocumentContact,
     onDismiss: () -> Unit,
     onSave: (Contact) -> Unit,
-    onDelete: () -> Unit  // 삭제 액션을 위한 콜백
+    onDelete: () -> Unit
 ) {
     var name by remember { mutableStateOf(documentContact.contact.name) }
     var phoneNumber by remember { mutableStateOf(documentContact.contact.phoneNumber) }
     var relationship by remember { mutableStateOf(documentContact.contact.relationship) }
-    // 삭제 확인 다이얼로그를 표시할지 여부 상태
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
-    // 편집 다이얼로그 (저장, 취소, 삭제 버튼 포함)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("사용자 편집") },
@@ -409,7 +385,6 @@ fun EditContactDialog(
             }
         },
         confirmButton = {
-            // 삭제, 취소, 저장 버튼을 한 줄에 배치
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -431,15 +406,12 @@ fun EditContactDialog(
         }
     )
 
-    // 삭제 버튼 클릭 시 나타나는 확인 다이얼로그
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text("삭제 확인") },
             text = {
-                Text(
-                    "정말로 삭제 하시겠습니까?\n저장 되어 있던 정보(이름, 전화번호, 관계)와 작성한 편지가 모두 삭제됩니다"
-                )
+                Text("정말로 삭제 하시겠습니까?\n저장 되어 있던 정보(이름, 전화번호, 관계)와 작성한 편지가 모두 삭제됩니다")
             },
             confirmButton = {
                 Button(onClick = {
@@ -464,12 +436,9 @@ fun Settiingitem(text: String, click: () -> Unit = {}) {
         .fillMaxWidth()
         .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
         .padding(16.dp)
-        .clickable {
-            click()
-        }) {
-        Text(
-            text = text,
-        )
+        .clickable { click() }
+    ) {
+        Text(text = text)
         Icon(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -479,13 +448,4 @@ fun Settiingitem(text: String, click: () -> Unit = {}) {
             tint = Color.Black
         )
     }
-
-}
-
-
-@Preview(showBackground = true)
-@Composable
-fun SettingsScreenPreview() {
-    val navController = NavController(context = LocalContext.current)
-    SettingsScreen(navController = navController)
 }

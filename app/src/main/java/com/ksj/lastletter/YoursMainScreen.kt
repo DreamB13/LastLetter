@@ -46,18 +46,16 @@ import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
 import kotlinx.coroutines.launch
 
-
 @Composable
 fun YoursMainScreen(navController: NavHostController) {
     var showDialog by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
-    var relationship by remember { mutableStateOf("") } // 관계 상태 추가
+    var relationship by remember { mutableStateOf("") }
     val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
     val contacts = remember { mutableStateListOf<DocumentContact>() }
     val coroutineScope = rememberCoroutineScope()
 
-    // 코루틴 스코프로 데이터 로드
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
@@ -65,7 +63,6 @@ fun YoursMainScreen(navController: NavHostController) {
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
                 contacts.clear()
                 contacts.addAll(fetchedContacts)
-                println("Load contacts: ${fetchedContacts.size}")
             } catch (e: Exception) {
                 println("Error loading contacts: ${e.message}")
             }
@@ -96,7 +93,6 @@ fun YoursMainScreen(navController: NavHostController) {
                 InfoCard(
                     text = documentContact.contact.name,
                     modifier = Modifier.clickable {
-                        println("Navigating to yoursContext/${documentContact.id}")
                         navController.navigate("yoursContext/${documentContact.id}")
                     }
                 )
@@ -154,11 +150,10 @@ fun YoursMainScreen(navController: NavHostController) {
                     },
                     confirmButton = {
                         Button(onClick = {
-                            // 코루틴 스코프로 데이터 저장
                             coroutineScope.launch {
                                 try {
                                     val contactRepository = ContactRepository()
-                                    val newContact = Contact(name, phoneNumber, relationship)
+                                    val newContact = com.ksj.lastletter.firebase.Contact(name, phoneNumber, relationship)
                                     contactRepository.addContact(newContact)
 
                                     val updatedContacts =
@@ -219,7 +214,7 @@ fun RelationshipDropdown(
         ) {
             relationships.forEach { relationship ->
                 DropdownMenuItem(
-                    text = {  // 필수 text 파라미터 추가
+                    text = {
                         Text(
                             text = relationship,
                             color = Color.Black
@@ -234,7 +229,6 @@ fun RelationshipDropdown(
         }
     }
 }
-
 
 @Composable
 fun InfoCard(
@@ -265,9 +259,9 @@ fun AddButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .size(width = 48.dp, height = 48.dp) // 라운드 직사각형 크기 설정
-            .background(Color.White, shape = RoundedCornerShape(12.dp)) // 흰색 배경과 둥근 모서리 설정
-            .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)), // 테두리 색상 설정
+            .size(width = 48.dp, height = 48.dp)
+            .background(Color.White, shape = RoundedCornerShape(12.dp))
+            .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
         Text(

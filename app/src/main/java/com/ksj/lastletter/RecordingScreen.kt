@@ -49,13 +49,12 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import kotlinx.coroutines.Job
 
-// 녹음 상태 관리를 위한 열거형
 enum class RecordingState {
-    NOT_STARTED,  // 녹음 시작 전
-    RECORDING,    // 녹음 중
-    PAUSED,       // 일시정지 상태
-    STOPPED,      // 정지 상태
-    PLAYING       // 재생 중
+    NOT_STARTED,
+    RECORDING,
+    PAUSED,
+    STOPPED,
+    PLAYING
 }
 
 @Composable
@@ -63,34 +62,26 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // 상태 관리 변수들
     var recordingState by remember { mutableStateOf(RecordingState.NOT_STARTED) }
     var timerSeconds by remember { mutableFloatStateOf(0.0f) }
     var formattedTime by remember { mutableStateOf("00:00.0") }
-    var recognizedText by remember { mutableStateOf("") } // STT 결과 저장 변수
+    var recognizedText by remember { mutableStateOf("") }
 
-    // 파형 데이터
     var waveformData by remember { mutableStateOf(List(50) { 0.05f }) }
 
-    // 미디어 리소스 관리
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
-    // 코루틴 작업 관리
     var timerJob by remember { mutableStateOf<Job?>(null) }
     var waveformJob by remember { mutableStateOf<Job?>(null) }
 
-    // 오디오 파일 경로
     val audioFilePath = remember { "${context.cacheDir.absolutePath}/recorded_audio.3gp" }
 
-    // 리소스 정리를 위한 DisposableEffect
     DisposableEffect(Unit) {
         onDispose {
-            // 타이머 및 파형 애니메이션 중지
             timerJob?.cancel()
             waveformJob?.cancel()
 
-            // 미디어 리소스 해제
             try {
                 mediaRecorder?.apply {
                     if (recordingState == RecordingState.RECORDING) {
@@ -105,12 +96,10 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     release()
                 }
             } catch (e: Exception) {
-                // 오류 무시
             }
         }
     }
 
-    // 마이크 권한 요청
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -120,13 +109,11 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     mediaRecorder = recorder
                     recordingState = RecordingState.RECORDING
 
-                    // 타이머 시작
                     timerJob = startTimer(coroutineScope) { newTime ->
                         timerSeconds = newTime
                         formattedTime = formatTime(newTime)
                     }
 
-                    // 파형 애니메이션 시작
                     waveformJob = animateWaveform(coroutineScope) { newData ->
                         waveformData = newData
                     }
@@ -135,7 +122,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
         }
     }
 
-    // 메인 UI
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
@@ -144,7 +130,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
             modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
-            // 상단 헤더: 뒤로가기 버튼과 연락처 이름
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 24.dp)
@@ -164,7 +149,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
             }
 
             if (recordingState == RecordingState.NOT_STARTED) {
-                // 녹음 시작 전 화면
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -172,7 +156,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         EnvelopeIcon(
                             modifier = Modifier.size(180.dp).clickable {
-                                // 마이크 권한 확인 및 녹음 시작
                                 if (ContextCompat.checkSelfPermission(
                                         context, Manifest.permission.RECORD_AUDIO
                                     ) == PackageManager.PERMISSION_GRANTED
@@ -182,13 +165,11 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             mediaRecorder = recorder
                                             recordingState = RecordingState.RECORDING
 
-                                            // 타이머 시작
                                             timerJob = startTimer(coroutineScope) { newTime ->
                                                 timerSeconds = newTime
                                                 formattedTime = formatTime(newTime)
                                             }
 
-                                            // 파형 애니메이션 시작
                                             waveformJob = animateWaveform(coroutineScope) { newData ->
                                                 waveformData = newData
                                             }
@@ -204,17 +185,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     }
                 }
             } else {
-                // 녹음/재생/일시정지/정지 화면
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 타이머 표시
                     Row(
                         modifier = Modifier.padding(top = 40.dp, bottom = 40.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 녹음 중일 때만 빨간 점 표시
                         if (recordingState == RecordingState.RECORDING) {
                             Box(
                                 modifier = Modifier
@@ -232,12 +210,10 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         )
                     }
 
-                    // 편지 아이콘
                     EnvelopeIcon(modifier = Modifier.size(100.dp))
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // 상태 텍스트
                     Text(
                         text = when (recordingState) {
                             RecordingState.RECORDING -> "녹음 중입니다"
@@ -251,7 +227,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
 
                     Spacer(modifier = Modifier.height(40.dp))
 
-                    // 오디오 파형
                     AudioWaveform(
                         waveformData = waveformData,
                         modifier = Modifier
@@ -261,7 +236,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // 컨트롤 버튼들
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -269,24 +243,20 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 재생 버튼
                         IconButton(
                             onClick = {
                                 if (recordingState == RecordingState.STOPPED) {
-                                    // 녹음된 오디오 재생
                                     playRecordedAudio(context, audioFilePath,
                                         onPlayerPrepared = { player ->
                                             mediaPlayer = player
                                             recordingState = RecordingState.PLAYING
 
-                                            // 타이머 리셋 및 시작
                                             timerSeconds = 0f
                                             timerJob = startTimer(coroutineScope) { newTime ->
                                                 timerSeconds = newTime
                                                 formattedTime = formatTime(newTime)
                                             }
 
-                                            // 파형 애니메이션 시작
                                             waveformJob = animateWaveform(coroutineScope) { newData ->
                                                 waveformData = newData
                                             }
@@ -311,25 +281,18 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             )
                         }
 
-                        // 일시정지/재개 버튼
                         IconButton(
                             onClick = {
                                 when (recordingState) {
                                     RecordingState.RECORDING -> {
-                                        // 녹음 일시정지
                                         pauseRecording(mediaRecorder)
                                         recordingState = RecordingState.PAUSED
-
-                                        // 타이머 및 파형 애니메이션 중지
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
                                     }
                                     RecordingState.PAUSED -> {
-                                        // 녹음 재개
                                         resumeRecording(mediaRecorder)
                                         recordingState = RecordingState.RECORDING
-
-                                        // 타이머 및 파형 애니메이션 재개
                                         timerJob = startTimer(
                                             coroutineScope,
                                             initialValue = timerSeconds
@@ -337,17 +300,13 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             timerSeconds = newTime
                                             formattedTime = formatTime(newTime)
                                         }
-
                                         waveformJob = animateWaveform(coroutineScope) { newData ->
                                             waveformData = newData
                                         }
                                     }
                                     RecordingState.PLAYING -> {
-                                        // 재생 일시정지
                                         pausePlayback(mediaPlayer)
                                         recordingState = RecordingState.STOPPED
-
-                                        // 타이머 및 파형 애니메이션 중지
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
                                     }
@@ -372,31 +331,21 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             )
                         }
 
-                        // 정지 버튼
                         IconButton(
                             onClick = {
                                 when (recordingState) {
                                     RecordingState.RECORDING, RecordingState.PAUSED -> {
-                                        // 녹음 정지
                                         stopRecording(mediaRecorder)
                                         mediaRecorder = null
                                         recordingState = RecordingState.STOPPED
-
-                                        // 타이머 및 파형 애니메이션 중지
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
-
-                                        // STT 변환 (실제 구현에서는 여기서 STT API 호출)
-                                        // 예시로 텍스트 설정
                                         recognizedText = "녹음된 내용이 텍스트로 변환되었습니다."
                                     }
                                     RecordingState.PLAYING -> {
-                                        // 재생 정지
                                         stopPlayback(mediaPlayer)
                                         mediaPlayer = null
                                         recordingState = RecordingState.STOPPED
-
-                                        // 타이머 및 파형 애니메이션 중지
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
                                     }

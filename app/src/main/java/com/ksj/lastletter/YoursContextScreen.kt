@@ -34,13 +34,11 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
     var showEditDialog by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf("") }
 
-    // Firestore에서 데이터 로드
     LaunchedEffect(contactId) {
-        coroutineScope.launch { // 추가: 코루틴 스코프 사용
+        coroutineScope.launch {
             try {
                 val contactRepository = ContactRepository()
                 contact.value = contactRepository.getContactById(contactId)
-                println("연락처 로드 성공: ${contact.value?.name}")
                 contact.value?.let { editedName = it.name }
             } catch (e: Exception) {
                 println("연락처 로드 실패: ${e.message}")
@@ -91,7 +89,6 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 ) {
                     ContextAddButton(
                         onClick = {
-                            // 녹음 화면으로 네비게이션
                             contact.value?.let { contactData ->
                                 navController.navigate("recording/${contactId}/${contactData.name}")
                             }
@@ -132,16 +129,12 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 confirmButton = {
                     Button(onClick = {
                         contact.value?.let { currentContact ->
-                            // 이름이 변경된 경우에만 업데이트
                             if (editedName != currentContact.name && editedName.isNotBlank()) {
                                 coroutineScope.launch {
                                     try {
                                         val contactRepository = ContactRepository()
-                                        // 업데이트된 Contact 객체 생성
                                         val updatedContact = currentContact.copy(name = editedName)
-                                        // Firebase 업데이트
                                         contactRepository.updateContact(contactId, updatedContact)
-                                        // 로컬 상태 업데이트
                                         contact.value = updatedContact
                                         showEditDialog = false
                                     } catch (e: Exception) {
@@ -165,7 +158,6 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
         }
     }
 }
-
 
 @Composable
 fun ContextInfoCard(date: String, text: String) {
