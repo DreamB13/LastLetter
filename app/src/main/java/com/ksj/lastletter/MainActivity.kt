@@ -109,7 +109,11 @@ class MainActivity : ComponentActivity() {
                             DailyQuestionDetail(navController = navController, docId = docId)
                         }
                         composable("myPage") {
-                            MyPageScreen(navController = navController)
+                            val appViewModel: AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+                            MyPageScreen(
+                                navController = navController
+
+                            )
                         }
                     }
                 }
