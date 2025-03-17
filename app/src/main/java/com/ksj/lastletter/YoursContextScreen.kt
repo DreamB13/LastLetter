@@ -33,13 +33,20 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
 
     var showEditDialog by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf("") }
+    var editedPhoneNumber by remember { mutableStateOf("") }
+    var editedRelationship by remember { mutableStateOf("") }
+    val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
 
     LaunchedEffect(contactId) {
         coroutineScope.launch {
             try {
                 val contactRepository = ContactRepository()
                 contact.value = contactRepository.getContactById(contactId)
-                contact.value?.let { editedName = it.name }
+                contact.value?.let {
+                    editedName = it.name
+                    editedPhoneNumber = it.phoneNumber
+                    editedRelationship = it.relationship
+                }
             } catch (e: Exception) {
                 println("연락처 로드 실패: ${e.message}")
             }
@@ -71,6 +78,8 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     )
                     IconButton(onClick = {
                         editedName = contactData.name
+                        editedPhoneNumber = contactData.phoneNumber
+                        editedRelationship = contactData.relationship
                         showEditDialog = true
                     }) {
                         Icon(
@@ -117,28 +126,59 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 onDismissRequest = { showEditDialog = false },
                 title = { Text("이름 수정") },
                 text = {
-                    Column {
+                    Column (
+                        modifier = Modifier
+                            .background(
+                                Color(0xFFFFE4C4),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(16.dp)
+                    ){
                         TextField(
                             value = editedName,
                             onValueChange = { editedName = it },
                             label = { Text("상대방 이름 (별명)") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 추가: 전화번호 입력 필드
+                        TextField(
+                            value = editedPhoneNumber,
+                            onValueChange = { editedPhoneNumber = it },
+                            label = { Text("전화번호") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // 추가: 관계 선택 드롭다운
+                        RelationshipDropdown(
+                            relationships,
+                            selectedRelationship = editedRelationship,
+                            onRelationshipSelected = { editedRelationship = it }
+                        )
                     }
                 },
                 confirmButton = {
                     Button(onClick = {
                         contact.value?.let { currentContact ->
-                            if (editedName != currentContact.name && editedName.isNotBlank()) {
+                            // 이름이 변경된 경우에만 업데이트
+                            if (editedName != currentContact.name ||
+                                editedPhoneNumber != currentContact.phoneNumber ||
+                                editedRelationship != currentContact.relationship) {
                                 coroutineScope.launch {
                                     try {
                                         val contactRepository = ContactRepository()
-                                        val updatedContact = currentContact.copy(name = editedName)
+                                        // 업데이트된 Contact 객체 생성
+                                        val updatedContact = currentContact.copy(
+                                            name = editedName,
+                                            phoneNumber = editedPhoneNumber,
+                                            relationship = editedRelationship)
+                                        // Firebase 업데이트
                                         contactRepository.updateContact(contactId, updatedContact)
+                                        // 로컬 상태 업데이트
                                         contact.value = updatedContact
                                         showEditDialog = false
                                     } catch (e: Exception) {
-                                        println("이름 업데이트 실패: ${e.message}")
+                                        println("사용자 정보 업데이트 실패: ${e.message}")
                                     }
                                 }
                             } else {
