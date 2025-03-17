@@ -70,7 +70,10 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("contactId") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                            DummyScreen(title = "YoursContext: $contactId")
+                            YoursContextScreen(
+                                navController = navController,
+                                contactId = contactId
+                            )
                         }
                         composable(
                             route = "recording/{contactId}/{contactName}",
@@ -80,7 +83,10 @@ class MainActivity : ComponentActivity() {
                             )
                         ) { backStackEntry ->
                             val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
-                            DummyScreen(title = "Recording: $contactName")
+                            RecordingScreen(
+                                navController = navController,
+                                contactName = contactName
+                            )
                         }
                         composable("settings") {
                             SettingsScreen(navController = navController)
