@@ -848,15 +848,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
 
 // 녹음 저장 대화상자
             if (showSaveDialog) {
-                var messageText by remember { mutableStateOf("") }
                 var selectedOption by remember { mutableStateOf(0) }
-                val options = listOf("메시지", "유언장")
+                // 두 번째 옵션 텍스트 상태 추가
+                var customDateText by remember { mutableStateOf("제목을 입력하세요") }
 
                 AlertDialog(
                     onDismissRequest = { showSaveDialog = false },
                     title = {
                         Text(
-                            text = "녹음 저장",
+                            text = "편지 저장",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black,
@@ -867,105 +867,90 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         Column(
                             modifier = Modifier.padding(8.dp)
                         ) {
-                            // 인식된 텍스트 표시
-                            if (recognizedText.isNotEmpty()) {
-                                Text(
-                                    text = "인식된 텍스트:",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.Black,
-                                    modifier = Modifier.padding(bottom = 4.dp)
+                            // 라디오 버튼 옵션 - 자동 저장
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedOption = 0 }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selectedOption == 0,
+                                    onClick = { selectedOption = 0 },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = Color(0xFFFFDCA8)
+                                    )
                                 )
 
-                                TextField(
-                                    value = recognizedText,
-                                    onValueChange = { recognizedText = it },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp)
-                                        .height(120.dp)
-                                        .border(
-                                            width = 1.dp,
-                                            color = Color.LightGray,
-                                            shape = RoundedCornerShape(8.dp)
-                                        ),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = Color.White,
-                                        unfocusedContainerColor = Color.White,
-                                        focusedIndicatorColor = Color.Transparent,
-                                        unfocusedIndicatorColor = Color.Transparent
-                                    )
+                                Text(
+                                    text = "자동 저장",
+                                    fontSize = 16.sp,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(start = 8.dp)
                                 )
                             }
 
-                            // 메시지 입력
-                            Text(
-                                text = "메시지:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-
-                            TextField(
-                                value = messageText,
-                                onValueChange = { messageText = it },
-                                placeholder = { Text("메시지를 입력하세요 (선택사항)") },
+                            // 두 번째 옵션 - 사용자 지정 날짜
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                                    .border(
-                                        width = 1.dp,
-                                        color = Color.LightGray,
-                                        shape = RoundedCornerShape(8.dp)
-                                    ),
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
-                                    focusedIndicatorColor = Color.Transparent,
-                                    unfocusedIndicatorColor = Color.Transparent
+                                    .clickable { selectedOption = 1 }
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selectedOption == 1,
+                                    onClick = { selectedOption = 1 },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = Color(0xFFFFDCA8)
+                                    )
                                 )
-                            )
 
-                            // 라디오 버튼 옵션
-                            Text(
-                                text = "저장 유형:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-
-                            options.forEachIndexed { index, option ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { selectedOption = index }
-                                        .padding(vertical = 8.dp)
-                                ) {
-                                    RadioButton(
-                                        selected = selectedOption == index,
-                                        onClick = { selectedOption = index },
-                                        colors = RadioButtonDefaults.colors(
-                                            selectedColor = Color(0xFFFFDCA8)
+                                // 선택되었을 때는 편집 가능한 TextField로 변경
+                                if (selectedOption == 1) {
+                                    TextField(
+                                        value = "",
+                                        onValueChange = { customDateText = it },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 8.dp),
+                                        colors = TextFieldDefaults.colors(
+                                            focusedContainerColor = Color.White,
+                                            unfocusedContainerColor = Color.White,
+                                            focusedIndicatorColor = Color(0xFFFFDCA8),
+                                            unfocusedIndicatorColor = Color.LightGray
+                                        ),
+                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                            fontSize = 16.sp,
+                                            color = Color.Black
                                         )
                                     )
-
+                                } else {
                                     Text(
-                                        text = option,
+                                        text = customDateText,
                                         fontSize = 16.sp,
                                         color = Color.Black,
                                         modifier = Modifier.padding(start = 8.dp)
                                     )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     },
                     confirmButton = {
                         Button(
                             onClick = {
-                                // TODO: 실제 저장 로직 구현
+                                if (selectedOption == 0) {
+                                    // TODO: 자동 저장 선택 시 변환된 텍스트를 모델 서버로 전송
+                                    // 예: sendTextToModelServer(recognizedText)
+                                } else {
+                                    // 두 번째 옵션의 경우 사용자가 수정한 텍스트 사용
+                                    // customDateText 변수에 수정된 텍스트가 저장됨
+                                }
+
+                                // TODO: 공통 저장 로직 구현
                                 // Firebase 또는 로컬 저장소에 녹음 파일과 메타데이터 저장
                                 showSaveDialog = false
                                 navController.popBackStack()
@@ -991,6 +976,9 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     }
                 )
             }
+
+
+
         }
     }
 }
