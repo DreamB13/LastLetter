@@ -22,9 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 @Composable
 fun YoursContextScreen(contactId: String, navController: NavController) {
@@ -108,17 +113,57 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val cardData = listOf(
-                Pair("1월 7일", "창 밖을 바라보다가"),
-                Pair("12월 4일", "설거지는 자기 전에"),
-                Pair("12월 2일", "햇살이 좋아서"),
-                Pair("11월 26일", "너가 어렸을 때"),
-                Pair("10월 7일", "바람이 차, 감기 조심")
-            )
+// 편지 데이터를 위한 상태 변수
+            var letterData by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
 
-            cardData.forEach { (date, text) ->
-                ContextInfoCard(date, text)
-                Spacer(modifier = Modifier.height(8.dp))
+// Firebase에서 데이터 불러오기
+            LaunchedEffect(contactId) {
+                coroutineScope.launch {
+                    try {
+                        // Firebase에서 현재 연락처(contactId)의 편지 목록 가져오기
+                        val db = FirebaseFirestore.getInstance()
+                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                        if (userId != null) {
+                            val lettersRef = db.collection("users").document(userId)
+                                .collection("Yours").document(contactId)
+                                .collection("letters")
+                                .orderBy(
+                                    "timestamp",
+                                    com.google.firebase.firestore.Query.Direction.DESCENDING
+                                )
+
+                            val result = withContext(Dispatchers.IO) {
+                                lettersRef.get().await()
+                            }
+
+                            val fetchedLetters = mutableListOf<Pair<String, String>>()
+                            for (doc in result) {
+                                val date = doc.getString("date") ?: ""
+                                val title = doc.getString("title") ?: ""
+                                fetchedLetters.add(Pair(date, title))
+                            }
+
+                            letterData = fetchedLetters
+                        }
+                    } catch (e: Exception) {
+                        println("편지 로드 실패: ${e.message}")
+                    }
+                }
+            }
+
+// 편지 목록 표시 (기존 코드 유지)
+            if (letterData.isEmpty()) {
+                Text(
+                    text = "아직 작성된 편지가 없습니다.",
+                    modifier = Modifier.padding(top = 16.dp),
+                    color = Color.Gray
+                )
+            } else {
+                letterData.forEach { (date, title) ->
+                    ContextInfoCard(date, title)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
         if (showEditDialog) {
@@ -126,14 +171,14 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 onDismissRequest = { showEditDialog = false },
                 title = { Text("이름 수정") },
                 text = {
-                    Column (
+                    Column(
                         modifier = Modifier
                             .background(
                                 Color(0xFFFFE4C4),
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .padding(16.dp)
-                    ){
+                    ) {
                         TextField(
                             value = editedName,
                             onValueChange = { editedName = it },
@@ -163,7 +208,8 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                             // 이름이 변경된 경우에만 업데이트
                             if (editedName != currentContact.name ||
                                 editedPhoneNumber != currentContact.phoneNumber ||
-                                editedRelationship != currentContact.relationship) {
+                                editedRelationship != currentContact.relationship
+                            ) {
                                 coroutineScope.launch {
                                     try {
                                         val contactRepository = ContactRepository()
@@ -171,9 +217,13 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                         val updatedContact = currentContact.copy(
                                             name = editedName,
                                             phoneNumber = editedPhoneNumber,
-                                            relationship = editedRelationship)
+                                            relationship = editedRelationship
+                                        )
                                         // Firebase 업데이트
-                                        contactRepository.updateContact(contactId, updatedContact)
+                                        contactRepository.updateContact(
+                                            contactId,
+                                            updatedContact
+                                        )
                                         // 로컬 상태 업데이트
                                         contact.value = updatedContact
                                         showEditDialog = false

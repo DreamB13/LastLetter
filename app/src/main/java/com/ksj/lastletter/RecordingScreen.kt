@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -942,16 +944,80 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     confirmButton = {
                         Button(
                             onClick = {
+                                // 현재 날짜 가져오기
+                                val currentDate = java.text.SimpleDateFormat(
+                                    "MM월 dd일",
+                                    java.util.Locale.getDefault()
+                                ).format(java.util.Date())
+
                                 if (selectedOption == 0) {
-                                    // TODO: 자동 저장 선택 시 변환된 텍스트를 모델 서버로 전송
+                                    // 자동 저장 옵션 선택 시
+                                    // TODO: 변환된 텍스트를 모델 서버로 전송
                                     // 예: sendTextToModelServer(recognizedText)
+
+                                    // Firebase에 저장
+                                    val db = FirebaseFirestore.getInstance()
+                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                                    if (userId != null) {
+                                        // 편지 데이터 생성
+                                        val letterData = hashMapOf(
+                                            "date" to currentDate,
+                                            "title" to "음성 메모",
+                                            "content" to recognizedText,
+                                            "timestamp" to com.google.firebase.Timestamp.now()
+                                        )
+
+                                        // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
+                                        val contactId = navController.currentBackStackEntry
+                                            ?.arguments?.getString("contactId") ?: ""
+
+                                        db.collection("users").document(userId)
+                                            .collection("Yours").document(contactId)
+                                            .collection("letters").add(letterData)
+                                            .addOnSuccessListener {
+                                                Log.d(
+                                                    "RecordingScreen",
+                                                    "Letter saved successfully"
+                                                )
+                                            }
+                                            .addOnFailureListener { e ->
+                                                Log.e("RecordingScreen", "Error saving letter", e)
+                                            }
+                                    }
                                 } else {
-                                    // 두 번째 옵션의 경우 사용자가 수정한 텍스트 사용
-                                    // customDateText 변수에 수정된 텍스트가 저장됨
+                                    // 두 번째 옵션의 경우 사용자가 입력한 제목 사용
+                                    val db = FirebaseFirestore.getInstance()
+                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                                    if (userId != null) {
+                                        // 편지 데이터 생성
+                                        val letterData = hashMapOf(
+                                            "date" to currentDate,
+                                            "title" to customDateText,
+                                            "content" to recognizedText,
+                                            "timestamp" to com.google.firebase.Timestamp.now()
+                                        )
+
+                                        // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
+                                        val contactId = navController.currentBackStackEntry
+                                            ?.arguments?.getString("contactId") ?: ""
+
+                                        db.collection("users").document(userId)
+                                            .collection("Yours").document(contactId)
+                                            .collection("letters").add(letterData)
+                                            .addOnSuccessListener {
+                                                Log.d(
+                                                    "RecordingScreen",
+                                                    "Letter saved successfully"
+                                                )
+                                            }
+                                            .addOnFailureListener { e ->
+                                                Log.e("RecordingScreen", "Error saving letter", e)
+                                            }
+                                    }
                                 }
 
-                                // TODO: 공통 저장 로직 구현
-                                // Firebase 또는 로컬 저장소에 녹음 파일과 메타데이터 저장
                                 showSaveDialog = false
                                 navController.popBackStack()
                             },
@@ -976,9 +1042,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     }
                 )
             }
-
-
-
         }
     }
 }
