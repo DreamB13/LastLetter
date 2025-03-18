@@ -34,6 +34,7 @@ import com.ksj.lastletter.dailyquestion.DailyQuestionDetail
 import com.ksj.lastletter.dailyquestion.DailyQuestionListScreen
 import com.ksj.lastletter.dailyquestion.DailyQuestionScreen
 import com.ksj.lastletter.login.LoginScreen
+import com.ksj.lastletter.login.PhoneTermScreen
 import com.ksj.lastletter.setting.SettingsScreen
 import com.ksj.lastletter.setting.TextSizeOption
 import com.ksj.lastletter.setting.TextSizeSettingScreen
@@ -134,12 +135,16 @@ class MainActivity : ComponentActivity() {
                             // MyPageScreen 내부에서 AppViewModel을 이용해 캐시된 데이터를 사용합니다.
                             MyPageScreen(navController = navController)
                         }
+                        composable("phoneTerm") {
+                            PhoneTermScreen(navController = navController)
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {

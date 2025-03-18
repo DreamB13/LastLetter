@@ -25,7 +25,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,7 +48,8 @@ fun DailyQuestionScreen(navController: NavController) {
 
     // 입력 상태/보기 상태를 관리하는 변수
     var isEditing by remember { mutableStateOf(true) }
-
+    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    val formattedDate = sdf.format(Date())
     // 사용자가 입력한 답변
     val answer = remember { mutableStateOf("") }
     val maxLength = 300
@@ -224,7 +228,7 @@ fun DailyQuestionScreen(navController: NavController) {
                             val dailyQuestionData = hashMapOf(
                                 "question" to questionText,
                                 "answer" to answer.value,
-                                "timestamp" to System.currentTimeMillis()
+                                "timestamp" to formattedDate
                             )
                             // 날짜 문서(docId)에 저장 (예: "DailyQuestion_74")
                             db.collection("users")
