@@ -8,6 +8,14 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        create("release") {
+            storeFile = file("C:\\Users\\seeju\\lastletter.jks")
+            storePassword = "Tlwns*8!@@"
+            keyAlias = "key0"
+            keyPassword = "Tlwns*8!@@"
+        }
+    }
     namespace = "com.ksj.lastletter"
     compileSdk = 35
 
