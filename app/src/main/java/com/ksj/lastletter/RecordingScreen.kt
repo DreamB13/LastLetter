@@ -1,9 +1,14 @@
 package com.ksj.lastletter
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioRecord
 import android.media.MediaPlayer
-import android.media.MediaRecorder
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -40,6 +45,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,19 +57,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import java.io.File
+import java.io.IOException
+import java.io.RandomAccessFile
+import java.util.concurrent.TimeUnit
 
 // 녹음 상태 관리를 위한 열거형
 enum class RecordingState {
-    NOT_STARTED,  // 녹음 시작 전
-    RECORDING,    // 녹음 중
-    PAUSED,       // 일시정지 상태
-    STOPPED,      // 정지 상태
-    PLAYING       // 재생 중
+    NOT_STARTED, // 녹음 시작 전
+    RECORDING,   // 녹음 중
+    PAUSED,      // 일시정지 상태
+    STOPPED,     // 정지 상태
+    PLAYING,     // 재생 중
+    CONVERTING   // STT 변환 중
 }
 
 @Composable
@@ -81,18 +102,28 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     // 파형 데이터
     var waveformData by remember { mutableStateOf(List(50) { 0.05f }) }
 
-    // 미디어 리소스 관리
-    var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
+    // 미디어 리소스 관리 - MediaRecorder에서 AudioRecord로 변경
+    var audioRecorder by remember { mutableStateOf<AudioRecord?>(null) }
     var mediaPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
 
     // 코루틴 작업 관리
     var timerJob by remember { mutableStateOf<Job?>(null) }
     var waveformJob by remember { mutableStateOf<Job?>(null) }
 
-    // 오디오 파일 경로
-    val audioFilePath = remember { "${context.cacheDir.absolutePath}/recorded_audio.3gp" }
+    // Google STT API Key
+    val googleAPIKey = try {
+        BuildConfig.GOOGLE_API_KEY
+    } catch (e: Exception) {
+        Log.e("RecordingScreen", "API 키를 찾을 수 없습니다. local.properties에 GOOGLE_API_KEY를 추가하세요.")
+        ""
+    }
 
-    //저장 버튼 변수
+    var isConvertingSTT by remember { mutableStateOf(false) }
+
+    // 오디오 파일 경로 (WAV 형식으로 변경)
+    val audioFilePath = remember { "${context.cacheDir.absolutePath}/recorded_audio.wav" }
+
+    // 저장 버튼 변수
     var showSaveButton by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
 
@@ -105,18 +136,19 @@ fun RecordingScreen(navController: NavController, contactName: String) {
 
             // 미디어 리소스 해제
             try {
-                mediaRecorder?.apply {
-                    if (recordingState == RecordingState.RECORDING) {
-                        stop()
-                    }
-                    release()
+                if (recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED) {
+                    stopRecording(audioRecorder)
                 }
+
+                audioRecorder = null
+
                 mediaPlayer?.apply {
                     if (isPlaying) {
                         stop()
                     }
                     release()
                 }
+                mediaPlayer = null
             } catch (e: Exception) {
                 // 오류 무시
             }
@@ -130,7 +162,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
         if (isGranted) {
             startRecording(context, audioFilePath,
                 onRecorderPrepared = { recorder ->
-                    mediaRecorder = recorder
+                    audioRecorder = recorder
                     recordingState = RecordingState.RECORDING
 
                     // 타이머 시작
@@ -145,6 +177,152 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     }
                 }
             )
+        }
+    }
+
+    // 인터넷 연결 확인 함수
+    fun isNetworkAvailable(): Boolean {
+        val connectivityManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
+    // STT 변환 함수 - REST API 사용
+    fun convertAudioToText(audioFile: File, onResult: (String) -> Unit) {
+        if (!isNetworkAvailable()) {
+            onResult("인터넷 연결이 필요합니다. Wi-Fi 또는 모바일 데이터를 확인해주세요.")
+            return
+        }
+
+        // API 키 검증
+        if (googleAPIKey.isBlank()) {
+            onResult("Google API 키가 설정되지 않았습니다. 설정 후 다시 시도해주세요.")
+            return
+        }
+
+        coroutineScope.launch(Dispatchers.IO) {
+            try {
+                isConvertingSTT = true
+                Log.d("STT", "오디오 파일 크기: ${audioFile.length()} 바이트")
+
+                // WAV 파일 로드 (헤더 건너뛰기)
+                val audioBytes = ByteArray(audioFile.length().toInt() - 44)
+                RandomAccessFile(audioFile, "r").use { file ->
+                    file.seek(44) // WAV 헤더 건너뛰기
+                    file.readFully(audioBytes)
+                }
+
+                Log.d("STT", "오디오 데이터 로드 완료: ${audioBytes.size} 바이트")
+
+                // Base64로 오디오 데이터 인코딩
+                val base64Audio = android.util.Base64.encodeToString(
+                    audioBytes, android.util.Base64.NO_WRAP
+                )
+
+                // Google Cloud Speech-to-Text REST API 요청 JSON 생성
+                val jsonBody = JSONObject().apply {
+                    put("config", JSONObject().apply {
+                        put("encoding", "LINEAR16")
+                        put("sampleRateHertz", 16000)
+                        put("languageCode", "ko-KR")
+                        put("model", "default")
+                    })
+                    put("audio", JSONObject().apply {
+                        put("content", base64Audio)
+                    })
+                }
+
+                // OkHttp 클라이언트로 REST 요청 전송
+                val client = OkHttpClient.Builder()
+                    .connectTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(60, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .build()
+
+                val requestBody =
+                    jsonBody.toString().toRequestBody("application/json".toMediaTypeOrNull())
+                val request = Request.Builder()
+                    .url("https://speech.googleapis.com/v1/speech:recognize?key=$googleAPIKey")
+                    .post(requestBody)
+                    .addHeader("Content-Type", "application/json")
+                    .build()
+
+                Log.d("STT", "Google API 요청 시작: ${request.url}")
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        val errorBody = response.body?.string() ?: ""
+                        Log.e(
+                            "STT",
+                            "API 응답 오류: ${response.code} - ${response.message}, 내용: $errorBody"
+                        )
+                        throw IOException("API 요청 실패: ${response.code} - ${response.message}")
+                    }
+
+                    val responseBody = response.body?.string() ?: ""
+                    Log.d("STT", "응답 데이터: $responseBody")
+
+                    val jsonResponse = JSONObject(responseBody)
+                    // JSON 응답 파싱
+                    val transcript =
+                        if (jsonResponse.has("results") && jsonResponse.getJSONArray("results")
+                                .length() > 0
+                        ) {
+                            val results = jsonResponse.getJSONArray("results")
+                            val transcriptBuilder = StringBuilder()
+
+                            for (i in 0 until results.length()) {
+                                val result = results.getJSONObject(i)
+                                if (result.has("alternatives") && result.getJSONArray("alternatives")
+                                        .length() > 0
+                                ) {
+                                    val alternative =
+                                        result.getJSONArray("alternatives").getJSONObject(0)
+                                    if (alternative.has("transcript")) {
+                                        if (transcriptBuilder.isNotEmpty()) transcriptBuilder.append(
+                                            " "
+                                        )
+                                        transcriptBuilder.append(alternative.getString("transcript"))
+                                    }
+                                }
+                            }
+
+                            transcriptBuilder.toString()
+                        } else {
+                            "인식 결과가 없습니다."
+                        }
+
+                    Log.d("STT", "변환 결과: $transcript")
+
+                    // UI 스레드에서 결과 업데이트
+                    withContext(Dispatchers.Main) {
+                        isConvertingSTT = false
+                        onResult(transcript)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("STT", "변환 오류", e)
+
+                val errorMsg = when {
+                    e.message?.contains("timeout", ignoreCase = true) == true ->
+                        "요청 시간이 초과되었습니다. 나중에 다시 시도해주세요."
+
+                    e.message?.contains("connect", ignoreCase = true) == true ->
+                        "네트워크 오류: Google 서버에 연결할 수 없습니다. 인터넷 연결을 확인해주세요."
+
+                    e.message?.contains("403", ignoreCase = true) == true ->
+                        "인증 오류: API 키가 유효하지 않거나 Speech-to-Text API 권한이 활성화되지 않았습니다."
+
+                    else -> "STT 변환 중 오류 발생: ${e.message}"
+                }
+
+                withContext(Dispatchers.Main) {
+                    isConvertingSTT = false
+                    onResult(errorMsg)
+                }
+            }
         }
     }
 
@@ -164,17 +342,20 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 24.dp)
             ) {
-                IconButton(onClick = { // 녹음 중이거나 일시정지 상태일 때 대화상자 표시
+                IconButton(onClick = {
+                    // 녹음 중이거나 일시정지 상태일 때 대화상자 표시
                     if (recordingState == RecordingState.RECORDING ||
                         recordingState == RecordingState.PAUSED
-                    ) { // 녹음 중이라면 일시정지로 변경
+                    ) {
+                        // 녹음 중이라면 일시정지로 변경
                         if (recordingState == RecordingState.RECORDING) {
-                            pauseRecording(mediaRecorder)
+                            pauseRecording(audioRecorder)
                             recordingState = RecordingState.PAUSED
                             // 타이머 및 파형 애니메이션 중지
                             timerJob?.cancel()
                             waveformJob?.cancel()
                         }
+
                         showExitDialog = true
                     } else {
                         navController.popBackStack()
@@ -186,6 +367,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         tint = Color.Black
                     )
                 }
+
                 Text(
                     text = contactName,
                     fontSize = 20.sp,
@@ -193,6 +375,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     color = Color.Black
                 )
             }
+
             if (showExitDialog) {
                 AlertDialog(
                     onDismissRequest = { showExitDialog = false },
@@ -229,7 +412,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         .weight(1f)
                                         .clickable {
                                             if (recordingState == RecordingState.PAUSED) {
-                                                resumeRecording(mediaRecorder)
+                                                resumeRecording(audioRecorder)
                                                 recordingState = RecordingState.RECORDING
                                                 timerJob = startTimer(
                                                     coroutineScope,
@@ -238,14 +421,16 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                                     timerSeconds = newTime
                                                     formattedTime = formatTime(newTime)
                                                 }
-                                                waveformJob = animateWaveform(coroutineScope) { newData ->
-                                                    waveformData = newData
-                                                }
+
+                                                waveformJob =
+                                                    animateWaveform(coroutineScope) { newData ->
+                                                        waveformData = newData
+                                                    }
                                             }
                                             showExitDialog = false
                                         }
                                         .padding(vertical = 12.dp),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    textAlign = TextAlign.Center
                                 )
 
                                 // 수직 구분선
@@ -265,15 +450,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .clickable {
-                                            stopRecording(mediaRecorder)
-                                            mediaRecorder = null
+                                            stopRecording(audioRecorder)
+                                            audioRecorder = null
                                             timerJob?.cancel()
                                             waveformJob?.cancel()
                                             showExitDialog = false
                                             navController.popBackStack()
                                         }
                                         .padding(vertical = 12.dp),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    textAlign = TextAlign.Center
                                 )
 
                                 // 수직 구분선
@@ -293,17 +478,23 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .clickable {
-                                            stopRecording(mediaRecorder)
-                                            mediaRecorder = null
+                                            stopRecording(audioRecorder)
+                                            audioRecorder = null
                                             recordingState = RecordingState.STOPPED
                                             timerJob?.cancel()
                                             waveformJob?.cancel()
-                                            recognizedText = "녹음된 내용이 텍스트로 변환되었습니다."
-                                            showExitDialog = false
-                                            showSaveDialog = true
+                                            // Google STT로 변환
+                                            recordingState = RecordingState.CONVERTING
+                                            // 오디오 파일을 텍스트로 변환
+                                            convertAudioToText(File(audioFilePath)) { result ->
+                                                recognizedText = result
+                                                recordingState = RecordingState.STOPPED
+                                                showExitDialog = false
+                                                showSaveDialog = true
+                                            }
                                         }
                                         .padding(vertical = 12.dp),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -324,24 +515,36 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         EnvelopeIcon(
                             modifier = Modifier
-                                .size(180.dp)
-                                .clickable {
-                                    // 마이크 권한 확인 및 녹음 시작
-                                    if (ContextCompat.checkSelfPermission(
-                                            context, Manifest.permission.RECORD_AUDIO
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    ) {
+                                .size(120.dp)
+                                .padding(bottom = 24.dp)
+                        )
+
+                        Text(
+                            text = "음성 녹음을 시작하려면\n마이크 버튼을 누르세요",
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 32.dp)
+                        )
+
+                        Button(
+                            onClick = {
+                                // 마이크 권한 확인
+                                when {
+                                    ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.RECORD_AUDIO
+                                    ) == PackageManager.PERMISSION_GRANTED -> {
+                                        // 권한이 있으면 녹음 시작
                                         startRecording(context, audioFilePath,
                                             onRecorderPrepared = { recorder ->
-                                                mediaRecorder = recorder
+                                                audioRecorder = recorder
                                                 recordingState = RecordingState.RECORDING
-
                                                 // 타이머 시작
                                                 timerJob = startTimer(coroutineScope) { newTime ->
                                                     timerSeconds = newTime
                                                     formattedTime = formatTime(newTime)
                                                 }
-
                                                 // 파형 애니메이션 시작
                                                 waveformJob =
                                                     animateWaveform(coroutineScope) { newData ->
@@ -349,422 +552,439 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                                     }
                                             }
                                         )
-                                    } else {
+                                    }
+
+                                    else -> {
+                                        // 권한이 없으면 요청
                                         permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                     }
                                 }
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Text(text = "클릭하면 녹음 시작", fontSize = 18.sp, color = Color.Black)
-                    }
-                }
-            } else {
-                // 녹음/재생/일시정지/정지 화면
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // 타이머 표시
-                    Row(
-                        modifier = Modifier.padding(top = 40.dp, bottom = 40.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // 녹음 중일 때만 빨간 점 표시
-                        if (recordingState == RecordingState.RECORDING) {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .background(Color.Red, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-
-                        Text(
-                            text = formattedTime,
-                            fontSize = 48.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                    }
-
-                    // 편지 아이콘
-                    EnvelopeIcon(modifier = Modifier.size(100.dp))
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // 상태 텍스트
-                    Text(
-                        text = when (recordingState) {
-                            RecordingState.RECORDING -> "녹음 중입니다"
-                            RecordingState.PAUSED -> "녹음 일시정지"
-                            RecordingState.PLAYING -> "재생 중입니다"
-                            RecordingState.STOPPED -> "녹음 완료"
-                            else -> ""
-                        },
-                        fontSize = 18.sp,
-                        color = Color.Black
-                    )
-
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    // 오디오 파형
-                    AudioWaveform(
-                        waveformData = waveformData,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // 저장 버튼 표시 조건
-                    if (recordingState == RecordingState.STOPPED && showSaveButton) {
-                        Button(
-                            onClick = { showSaveDialog = true },
-                            modifier = Modifier.fillMaxWidth(),
+                            },
+                            modifier = Modifier.size(64.dp),
+                            shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFFDCA8),
                                 contentColor = Color.Black
                             )
                         ) {
-                            Text(
-                                text = "편지 저장",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                    }
-                    if (showSaveDialog) {
-                        SaveLetterDialog(
-                            recognizedText = recognizedText,
-                            onDismiss = { showSaveDialog = false },
-                            onSave = { title, content ->
-                                // 여기서 저장 로직을 구현
-                                // Firestore에 저장하는 코드를 추가할 수 있음
-                                showSaveDialog = false
-                                showSaveButton = false
-                                navController.popBackStack() // 저장 후 이전 화면으로 돌아가기
-                            }
-                        )
-                    }
-
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // 컨트롤 버튼들
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 32.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // 재생 버튼
-                        IconButton(
-                            onClick = {
-                                if (recordingState == RecordingState.STOPPED) {
-                                    // 녹음된 오디오 재생
-                                    playRecordedAudio(context, audioFilePath,
-                                        onPlayerPrepared = { player ->
-                                            mediaPlayer = player
-                                            recordingState = RecordingState.PLAYING
-
-                                            // 타이머 리셋 및 시작
-                                            timerSeconds = 0f
-                                            timerJob = startTimer(coroutineScope) { newTime ->
-                                                timerSeconds = newTime
-                                                formattedTime = formatTime(newTime)
-                                            }
-
-                                            // 파형 애니메이션 시작
-                                            waveformJob =
-                                                animateWaveform(coroutineScope) { newData ->
-                                                    waveformData = newData
-                                                }
-                                        },
-                                        onCompletion = {
-                                            recordingState = RecordingState.STOPPED
-                                            timerJob?.cancel()
-                                            waveformJob?.cancel()
-                                        }
-                                    )
-                                }
-                            },
-                            modifier = Modifier.size(48.dp),
-                            enabled = recordingState == RecordingState.STOPPED
-                        ) {
                             Icon(
                                 imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Play",
-                                tint = if (recordingState == RecordingState.STOPPED)
-                                    Color(0xFFFFDCA8) else Color.Gray,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-
-                        // 일시정지/재개 버튼
-                        IconButton(
-                            onClick = {
-                                when (recordingState) {
-                                    RecordingState.RECORDING -> {
-                                        // 녹음 일시정지
-                                        pauseRecording(mediaRecorder)
-                                        recordingState = RecordingState.PAUSED
-
-                                        // 타이머 및 파형 애니메이션 중지
-                                        timerJob?.cancel()
-                                        waveformJob?.cancel()
-                                    }
-
-                                    RecordingState.PAUSED -> {
-                                        // 녹음 재개
-                                        resumeRecording(mediaRecorder)
-                                        recordingState = RecordingState.RECORDING
-
-                                        // 타이머 및 파형 애니메이션 재개
-                                        timerJob = startTimer(
-                                            coroutineScope,
-                                            initialValue = timerSeconds
-                                        ) { newTime ->
-                                            timerSeconds = newTime
-                                            formattedTime = formatTime(newTime)
-                                        }
-
-                                        waveformJob = animateWaveform(coroutineScope) { newData ->
-                                            waveformData = newData
-                                        }
-                                    }
-
-                                    RecordingState.PLAYING -> {
-                                        // 재생 일시정지
-                                        pausePlayback(mediaPlayer)
-                                        recordingState = RecordingState.STOPPED
-
-                                        // 타이머 및 파형 애니메이션 중지
-                                        timerJob?.cancel()
-                                        waveformJob?.cancel()
-                                    }
-
-                                    else -> {}
-                                }
-                            },
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(Color.White, CircleShape)
-                                .border(2.dp, Color(0xFFFFDCA8), CircleShape),
-                            enabled = recordingState in listOf(
-                                RecordingState.RECORDING,
-                                RecordingState.PAUSED,
-                                RecordingState.PLAYING
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Menu,
-                                contentDescription = "Pause",
-                                tint = Color(0xFFFFDCA8),
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
-
-                        // 정지 버튼
-                        IconButton(
-                            onClick = {
-                                when (recordingState) {
-                                    RecordingState.RECORDING, RecordingState.PAUSED -> {
-                                        // 녹음 정지
-                                        stopRecording(mediaRecorder)
-                                        mediaRecorder = null
-                                        recordingState = RecordingState.STOPPED
-
-                                        // 타이머 및 파형 애니메이션 중지
-                                        timerJob?.cancel()
-                                        waveformJob?.cancel()
-
-                                        // STT 변환 (실제 구현에서는 여기서 STT API 호출)
-                                        // 예시로 텍스트 설정
-                                        recognizedText = "녹음된 내용이 텍스트로 변환되었습니다."
-
-                                        // 저장 버튼 표시
-                                        showSaveButton = true
-                                    }
-
-                                    RecordingState.PLAYING -> {
-                                        // 재생 정지
-                                        stopPlayback(mediaPlayer)
-                                        mediaPlayer = null
-                                        recordingState = RecordingState.STOPPED
-
-                                        // 타이머 및 파형 애니메이션 중지
-                                        timerJob?.cancel()
-                                        waveformJob?.cancel()
-
-                                        showSaveButton = true
-                                    }
-
-                                    else -> {}
-                                }
-                            },
-                            modifier = Modifier.size(48.dp),
-                            enabled = recordingState in listOf(
-                                RecordingState.RECORDING,
-                                RecordingState.PAUSED,
-                                RecordingState.PLAYING
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Stop",
-                                tint = if (recordingState in listOf(
-                                        RecordingState.RECORDING,
-                                        RecordingState.PAUSED,
-                                        RecordingState.PLAYING
-                                    )
-                                ) Color(0xFFFFDCA8) else Color.Gray,
-                                modifier = Modifier.size(36.dp)
+                                contentDescription = "Start Recording",
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
                 }
+            } else if (recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED) {
+                // 녹음 중 화면
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // 타이머 표시
+                    Text(
+                        text = formattedTime,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(top = 40.dp)
+                    )
+
+                    // 파형 애니메이션
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .padding(16.dp)
+                    ) {
+                        AudioWaveform(
+                            waveformData = waveformData,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    // 녹음 컨트롤 버튼
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 32.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        // 중지 버튼
+                        Button(
+                            onClick = {
+                                stopRecording(audioRecorder)
+                                audioRecorder = null
+                                recordingState = RecordingState.STOPPED
+                                timerJob?.cancel()
+                                waveformJob?.cancel()
+                                showSaveButton = true
+                            },
+                            modifier = Modifier.size(64.dp),
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Red,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Stop Recording",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        // 일시정지/재개 버튼
+                        Button(
+                            onClick = {
+                                if (recordingState == RecordingState.RECORDING) {
+                                    pauseRecording(audioRecorder)
+                                    recordingState = RecordingState.PAUSED
+                                    timerJob?.cancel()
+                                    waveformJob?.cancel()
+                                } else {
+                                    resumeRecording(audioRecorder)
+                                    recordingState = RecordingState.RECORDING
+                                    timerJob = startTimer(
+                                        coroutineScope,
+                                        initialValue = timerSeconds
+                                    ) { newTime ->
+                                        timerSeconds = newTime
+                                        formattedTime = formatTime(newTime)
+                                    }
+                                    waveformJob = animateWaveform(coroutineScope) { newData ->
+                                        waveformData = newData
+                                    }
+                                }
+                            },
+                            modifier = Modifier.size(64.dp),
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (recordingState == RecordingState.RECORDING)
+                                    Color(0xFFFFDCA8) else Color.Green,
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (recordingState == RecordingState.RECORDING)
+                                    Icons.Default.Menu else Icons.Default.PlayArrow,
+                                contentDescription = if (recordingState == RecordingState.RECORDING)
+                                    "Pause Recording" else "Resume Recording",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+            } else if (recordingState == RecordingState.STOPPED && showSaveButton) {
+                // 녹음 정지 후 저장/변환 화면
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "녹음 완료!",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 24.dp)
+                    )
+
+                    Text(
+                        text = "녹음 시간: $formattedTime",
+                        fontSize = 18.sp,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 32.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        // 재생 버튼
+                        Button(
+                            onClick = {
+                                recordingState = RecordingState.PLAYING
+                                playRecordedAudio(
+                                    context,
+                                    audioFilePath,
+                                    onPlayerPrepared = { player ->
+                                        mediaPlayer = player
+                                    },
+                                    onCompletion = {
+                                        recordingState = RecordingState.STOPPED
+                                        mediaPlayer = null
+                                    }
+                                )
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFDCA8),
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = "Play Recording",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("재생")
+                        }
+
+                        // STT 변환 버튼
+                        Button(
+                            onClick = {
+                                recordingState = RecordingState.CONVERTING
+                                convertAudioToText(File(audioFilePath)) { result ->
+                                    recognizedText = result
+                                    recordingState = RecordingState.STOPPED
+                                    showSaveDialog = true
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFDCA8),
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Convert to Text",
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("텍스트 변환")
+                        }
+                    }
+                }
+            } else if (recordingState == RecordingState.PLAYING) {
+                // 녹음 재생 중 화면
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "재생 중...",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 32.dp)
+                    )
+
+                    // 임시 파형 표시
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .padding(16.dp)
+                    ) {
+                        AudioWaveform(
+                            waveformData = waveformData,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            stopPlayback(mediaPlayer)
+                            mediaPlayer = null
+                            recordingState = RecordingState.STOPPED
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Red,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Stop Playback",
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                        Text("정지")
+                    }
+                }
+            } else if (recordingState == RecordingState.CONVERTING) {
+                // STT 변환 중 화면
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "음성을 텍스트로 변환 중...",
+                            fontSize = 18.sp,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+
+                        // 로딩 표시를 위한 작은 애니메이션 효과
+                        var dotCount by remember { mutableStateOf(1) }
+
+                        LaunchedEffect(key1 = true) {
+                            while (isConvertingSTT) {
+                                delay(500)
+                                dotCount = (dotCount % 3) + 1
+                            }
+                        }
+
+                        Text(
+                            text = ".".repeat(dotCount),
+                            fontSize = 24.sp,
+                            color = Color.Black
+                        )
+                    }
+                }
+            }
+
+// 녹음 저장 대화상자
+            if (showSaveDialog) {
+                var messageText by remember { mutableStateOf("") }
+                var selectedOption by remember { mutableStateOf(0) }
+                val options = listOf("메시지", "유언장")
+
+                AlertDialog(
+                    onDismissRequest = { showSaveDialog = false },
+                    title = {
+                        Text(
+                            text = "녹음 저장",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            // 인식된 텍스트 표시
+                            if (recognizedText.isNotEmpty()) {
+                                Text(
+                                    text = "인식된 텍스트:",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.Black,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+
+                                TextField(
+                                    value = recognizedText,
+                                    onValueChange = { recognizedText = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp)
+                                        .height(120.dp)
+                                        .border(
+                                            width = 1.dp,
+                                            color = Color.LightGray,
+                                            shape = RoundedCornerShape(8.dp)
+                                        ),
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.White,
+                                        unfocusedContainerColor = Color.White,
+                                        focusedIndicatorColor = Color.Transparent,
+                                        unfocusedIndicatorColor = Color.Transparent
+                                    )
+                                )
+                            }
+
+                            // 메시지 입력
+                            Text(
+                                text = "메시지:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+
+                            TextField(
+                                value = messageText,
+                                onValueChange = { messageText = it },
+                                placeholder = { Text("메시지를 입력하세요 (선택사항)") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.LightGray,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.White,
+                                    unfocusedContainerColor = Color.White,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                )
+                            )
+
+                            // 라디오 버튼 옵션
+                            Text(
+                                text = "저장 유형:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+
+                            options.forEachIndexed { index, option ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedOption = index }
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = selectedOption == index,
+                                        onClick = { selectedOption = index },
+                                        colors = RadioButtonDefaults.colors(
+                                            selectedColor = Color(0xFFFFDCA8)
+                                        )
+                                    )
+
+                                    Text(
+                                        text = option,
+                                        fontSize = 16.sp,
+                                        color = Color.Black,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                // TODO: 실제 저장 로직 구현
+                                // Firebase 또는 로컬 저장소에 녹음 파일과 메타데이터 저장
+                                showSaveDialog = false
+                                navController.popBackStack()
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFFDCA8),
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Text("저장")
+                        }
+                    },
+                    dismissButton = {
+                        Button(
+                            onClick = { showSaveDialog = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.LightGray,
+                                contentColor = Color.Black
+                            )
+                        ) {
+                            Text("취소")
+                        }
+                    }
+                )
             }
         }
     }
 }
 
-@Composable
-fun SaveLetterDialog(
-    recognizedText: String,
-    onDismiss: () -> Unit,
-    onSave: (title: String, content: String) -> Unit
-) {
-    var selectedOption by remember { mutableStateOf("자동 저장") }
-    var date by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf(recognizedText) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "편지 저장",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = Color(0xFFFFE4C4),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp)
-            ) {
-                // 라디오 버튼 옵션들
-                Text(
-                    text = "저장 방식",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    RadioButton(
-                        selected = selectedOption == "자동 저장",
-                        onClick = { selectedOption = "자동 저장" },
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = Color(0xFFFFDCA8),
-                            unselectedColor = Color.Gray
-                        )
-                    )
-                    Text(
-                        text = "자동 저장",
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                ) {
-                    RadioButton(
-                        selected = selectedOption == "직접 말하기",
-                        onClick = { selectedOption = "직접 말하기" },
-                        colors = RadioButtonDefaults.colors(
-                            selectedColor = Color(0xFFFFDCA8),
-                            unselectedColor = Color.Gray
-                        )
-                    )
-                    Text(
-                        text = "직접 말하기",
-                        fontSize = 16.sp,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 날짜 입력 필드
-                TextField(
-                    value = date,
-                    onValueChange = { date = it },
-                    label = { Text("날짜") },
-                    placeholder = { Text("예: 12월 26일") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedLabelColor = Color(0xFFFFDCA8),
-                        cursorColor = Color(0xFFFFDCA8)
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // 내용 입력 필드 (인식된 텍스트로 미리 채워짐)
-                TextField(
-                    value = content,
-                    onValueChange = { content = it },
-                    label = { Text("내용") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(150.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        focusedLabelColor = Color(0xFFFFDCA8),
-                        cursorColor = Color(0xFFFFDCA8)
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = { onSave(date, content) },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFDCA8),
-                    contentColor = Color.Black
-                )
-            ) {
-                Text("저장")
-            }
-        },
-        dismissButton = {
-            Button(
-                onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.LightGray,
-                    contentColor = Color.Black
-                )
-            ) {
-                Text("취소")
-            }
-        },
-        containerColor = Color.White,
-        shape = RoundedCornerShape(16.dp)
-    )
-}
