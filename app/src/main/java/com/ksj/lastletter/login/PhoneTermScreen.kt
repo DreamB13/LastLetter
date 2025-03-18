@@ -53,9 +53,9 @@ import com.ksj.lastletter.R
 fun PhoneTermScreen(navController: NavController) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val firestore = FirebaseFirestore.getInstance()
 
-    // 리소스에 저장된 약관 제목 및 내용 (strings.xml에 정의)
-    // 예: <string name="tos_content">...</string> , <string name="privacy_content">...</string>
+    // 리소스에 저장된 약관 및 개인정보 처리방침 내용
     val tosText = stringResource(id = R.string.PRIVACY_TITLE)
     val privacyText = stringResource(id = R.string.PRIVACY_CONTENT)
 
@@ -70,8 +70,8 @@ fun PhoneTermScreen(navController: NavController) {
     var ageChecked by remember { mutableStateOf(false) }         // 만 14세 이상 (필수)
 
     // "내용 보기" 팝업 상태
-    var showTosDialog by remember { mutableStateOf(false) }       // 이용약관 팝업
-    var showPrivacyDialog by remember { mutableStateOf(false) }   // 개인정보 처리방침 팝업
+    var showTosDialog by remember { mutableStateOf(false) }
+    var showPrivacyDialog by remember { mutableStateOf(false) }
 
     // 필수 항목 체크 여부
     val isAllRequiredChecked = termsChecked && privacyChecked && ageChecked
@@ -86,15 +86,15 @@ fun PhoneTermScreen(navController: NavController) {
         try {
             val account = GoogleSignIn.getSignedInAccountFromIntent(result.data)
                 .getResult(ApiException::class.java)
-            val idToken = account.idToken
+            val idToken = account?.idToken
             if (idToken != null) {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
                 auth.signInWithCredential(credential).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        // 로그인 성공 후, 현재 사용자의 uid가 존재하면 전화번호 업데이트
+                        // 로그인 성공 후 Firestore에 전화번호 저장 후 DailyQuestionScreen으로 이동
                         val uid = auth.currentUser?.uid
                         if (uid != null) {
-                            FirebaseFirestore.getInstance().collection("users")
+                            firestore.collection("users")
                                 .document(uid)
                                 .set(
                                     mapOf("phoneNumber" to formatPhoneNumber(phoneNumberInput)),
@@ -107,8 +107,6 @@ fun PhoneTermScreen(navController: NavController) {
                                 }
                                 .addOnFailureListener { e ->
                                     Toast.makeText(context, "전화번호 업데이트 실패: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    Log.e("PhoneTermScreen", "전화번호 업데이트 실패, ${e.message}")
-                                    // 업데이트 실패해도 다음 화면으로 이동
                                     navController.navigate("dailyQuestion") {
                                         popUpTo("phoneTerm") { inclusive = true }
                                     }
@@ -119,18 +117,14 @@ fun PhoneTermScreen(navController: NavController) {
                             }
                         }
                     } else {
-                        Toast.makeText(
-                            context,
-                            "구글 로그인 실패: ${task.exception?.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, "구글 로그인 실패: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
-                Log.e("GoogleLogin", "idToken is null")
+                Toast.makeText(context, "idToken이 없습니다.", Toast.LENGTH_SHORT).show()
             }
         } catch (e: ApiException) {
-            Log.w("GoogleLogin", "Google sign in failed", e)
+            Toast.makeText(context, "구글 로그인 오류: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -186,13 +180,37 @@ fun PhoneTermScreen(navController: NavController) {
             )
             Button(
                 onClick = {
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(clientId)
-                        .requestEmail()
-                        .build()
-                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                    googleSignInClient.signOut().addOnCompleteListener {
-                        googleLauncher.launch(googleSignInClient.signInIntent)
+                    if (isNextEnabled) {
+                        // 전화번호를 Firestore에 저장하고 DailyQuestionScreen으로 이동
+                        val uid = auth.currentUser?.uid
+                        if (uid != null) {
+                            firestore.collection("users")
+                                .document(uid)
+                                .set(
+                                    mapOf("phoneNumber" to formatPhoneNumber(phoneNumberInput)),
+                                    com.google.firebase.firestore.SetOptions.merge()
+                                )
+                                .addOnSuccessListener {
+                                    navController.navigate("dailyQuestion") {
+                                        popUpTo("phoneTerm") { inclusive = true }
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Toast.makeText(context, "전화번호 업데이트 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
+                            googleLauncher.launch(
+                                GoogleSignIn.getClient(
+                                    context,
+                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestIdToken(clientId)
+                                        .requestEmail()
+                                        .build()
+                                ).signInIntent
+                            )
+                        }
+                    } else {
+                        Toast.makeText(context, "모든 필수 항목을 체크해 주세요.", Toast.LENGTH_SHORT).show()
                     }
                 },
                 enabled = isNextEnabled,
@@ -203,7 +221,6 @@ fun PhoneTermScreen(navController: NavController) {
         }
     }
 
-    // 이용약관 내용 팝업 (스크롤 가능)
     if (showTosDialog) {
         AlertDialog(
             onDismissRequest = { showTosDialog = false },
@@ -215,7 +232,7 @@ fun PhoneTermScreen(navController: NavController) {
                         .height(300.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(text = privacyText)
+                    Text(text = tosText)
                 }
             },
             confirmButton = {
@@ -226,7 +243,6 @@ fun PhoneTermScreen(navController: NavController) {
         )
     }
 
-    // 개인정보 처리방침 내용 팝업 (스크롤 가능)
     if (showPrivacyDialog) {
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
@@ -238,7 +254,7 @@ fun PhoneTermScreen(navController: NavController) {
                         .height(300.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(text = tosText)
+                    Text(text = privacyText)
                 }
             },
             confirmButton = {
@@ -274,7 +290,7 @@ fun CheckItemWithContent(
 }
 
 /**
- * 내용 보기 버튼이 없는 체크 항목
+ * "내용 보기"가 없는 일반 체크 항목
  */
 @Composable
 fun CheckItem(

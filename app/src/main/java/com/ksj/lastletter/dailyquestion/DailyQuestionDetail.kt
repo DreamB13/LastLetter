@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,7 +26,6 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
     val db = FirebaseFirestore.getInstance()
     val uid = FirebaseAuth.getInstance().currentUser?.uid
 
-    // 사용자 uid가 있을 때, 해당 사용자의 DailyQuestion 컬렉션에서 문서를 가져옵니다.
     LaunchedEffect(docId, uid) {
         if (uid != null) {
             db.collection("users").document(uid).collection("DailyQuestion")
@@ -33,11 +33,11 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                 .get()
                 .addOnSuccessListener { document ->
                     if (document != null && document.exists()) {
-                        questionAnswer = document.toObject(QuestionAnswer::class.java)?.copy(id = docId)
+                        questionAnswer = parseQuestionAnswer(document)
                     }
                 }
                 .addOnFailureListener { exception ->
-                    // 에러 처리
+                    println("Error reading document: ${exception.message}")
                 }
         }
     }
@@ -47,15 +47,13 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "", color = Color.Black) },
+                title = { Text("", color = Color.Black) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = backgroundColor
-                )
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = backgroundColor)
             )
         }
     ) { innerPadding ->
@@ -66,25 +64,17 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                 .background(backgroundColor)
         ) {
             if (questionAnswer == null) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
+                Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     Text(
                         text = questionAnswer?.question ?: "",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = Color.Black
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-
                     val timeText = remember(questionAnswer?.timestamp) {
                         questionAnswer?.timestamp?.let {
                             val sdf = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault())
@@ -92,17 +82,15 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                         } ?: ""
                     }
                     Text(
-                        text = timeText,
+                        text = "1번째 질문 $timeText",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
                     )
-
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFFF2F7), shape = RoundedCornerShape(8.dp))
+                            .background(getColorForEmotion(questionAnswer?.emotion ?: "😊"), shape = RoundedCornerShape(8.dp))
                             .padding(16.dp)
                     ) {
                         Text(
@@ -111,9 +99,7 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                             color = Color.Black
                         )
                     }
-
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
@@ -121,14 +107,41 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                         TextButton(onClick = {
                             // 광고 보고 수정하기 로직 구현
                         }) {
-                            Text(
-                                text = "광고 보고 수정하기",
-                                color = Color.Gray
-                            )
+                            Text("광고 보고 수정하기", color = Color.Gray)
                         }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Firestore의 DocumentSnapshot를 파싱하여 QuestionAnswer 객체로 변환하는 함수
+ */
+private fun parseQuestionAnswer(document: DocumentSnapshot): QuestionAnswer {
+    val id = document.id
+    val question = document.getString("question") ?: ""
+    val answer = document.getString("answer") ?: ""
+    val rawTimestamp = document.get("timestamp")
+    val numericTimestamp = when (rawTimestamp) {
+        is Number -> rawTimestamp.toLong()
+        is String -> {
+            try {
+                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                sdf.parse(rawTimestamp)?.time ?: 0L
+            } catch (e: Exception) {
+                0L
+            }
+        }
+        else -> 0L
+    }
+    val emotion = document.getString("emotion") ?: "😊"
+    return QuestionAnswer(
+        id = id,
+        question = question,
+        answer = answer,
+        timestamp = numericTimestamp,
+        emotion = emotion
+    )
 }
