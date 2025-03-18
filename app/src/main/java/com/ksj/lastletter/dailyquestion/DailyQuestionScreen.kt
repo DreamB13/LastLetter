@@ -24,12 +24,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.ksj.lastletter.AppViewModel
 import com.ksj.lastletter.R
+import com.ksj.lastletter.firebase.DocumentContact
 import java.time.LocalDate
 
 // 감정에 따른 배경색 매핑 함수 (필요에 따라 색상을 수정하세요)
@@ -52,6 +55,8 @@ fun DailyQuestionScreen(navController: NavController) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val uid = auth.currentUser?.uid
+    val appViewModel: AppViewModel = viewModel()
+    val contacts: List<DocumentContact> = appViewModel.contacts.value
 
     // 오늘 날짜의 dayOfYear를 이용해 문서 ID를 정합니다 (예: "DailyQuestion_74")
     val today = LocalDate.now().dayOfYear

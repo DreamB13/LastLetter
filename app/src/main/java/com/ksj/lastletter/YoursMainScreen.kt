@@ -13,11 +13,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -40,15 +45,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavHostController
+import androidx.navigation.NavController
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
 import kotlinx.coroutines.launch
 
 @Composable
-fun YoursMainScreen(navController: NavHostController) {
+fun YoursMainScreen(navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
+    var showNoContactsDialog by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var relationship by remember { mutableStateOf("") }
@@ -56,6 +62,7 @@ fun YoursMainScreen(navController: NavHostController) {
     val contacts = remember { mutableStateListOf<DocumentContact>() }
     val coroutineScope = rememberCoroutineScope()
 
+    // 연락처 목록 불러오기 (AppViewModel 등 캐시를 사용해도 되고, 여기서 직접 불러오도록 함)
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
@@ -63,14 +70,17 @@ fun YoursMainScreen(navController: NavHostController) {
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
                 contacts.clear()
                 contacts.addAll(fetchedContacts)
+                if (contacts.isEmpty()) {
+                    showNoContactsDialog = true
+                }
             } catch (e: Exception) {
                 println("Error loading contacts: ${e.message}")
             }
         }
     }
+
     Surface(
-        modifier = Modifier
-            .fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
     ) {
         Column(
@@ -78,17 +88,15 @@ fun YoursMainScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(16.dp),
             verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "남은 너에게",
+                text = "남은 너에게",
                 fontSize = 20.sp,
                 color = Color.Black,
                 modifier = Modifier.align(Alignment.Start)
             )
-
             Spacer(modifier = Modifier.height(32.dp))
-
             contacts.forEach { documentContact ->
                 InfoCard(
                     text = documentContact.contact.name,
@@ -102,84 +110,110 @@ fun YoursMainScreen(navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                AddButton (onClick = {
-                    showDialog = true
-                })
-            }
-
-            if (showDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDialog = false },
-                    title = {
-                        Text(
-                            text = "사용자 추가",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                    },
-                    text = {
-                        Column(
-                            modifier = Modifier
-                                .background(
-                                    Color(0xFFFFE4C4),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .padding(16.dp)
-                        ) {
-                            TextField(
-                                value = name,
-                                onValueChange = { name = it },
-                                label = { Text("상대방 이름 (별명)") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextField(
-                                value = phoneNumber,
-                                onValueChange = { phoneNumber = it },
-                                label = { Text("전화번호") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            RelationshipDropdown(
-                                relationships,
-                                selectedRelationship = relationship,
-                                onRelationshipSelected = { relationship = it }
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        Button(onClick = {
-                            coroutineScope.launch {
-                                try {
-                                    val contactRepository = ContactRepository()
-                                    val newContact = com.ksj.lastletter.firebase.Contact(name, phoneNumber, relationship)
-                                    contactRepository.addContact(newContact)
-
-                                    val updatedContacts =
-                                        contactRepository.getContactsWithCoroutines()
-                                    contacts.clear()
-                                    contacts.addAll(updatedContacts)
-                                    showDialog = false
-                                    name = ""
-                                    phoneNumber = ""
-                                    relationship = ""
-                                } catch (e: Exception) {
-                                    println("Error adding contact: ${e.message}")
-                                }
-                            }
-                        }) {
-                            Text("저장")
-                        }
-                    },
-                    dismissButton = {
-                        Button(onClick = { showDialog = false }) {
-                            Text("취소")
-                        }
-                    }
-                )
+                AddButton(onClick = { showDialog = true })
             }
         }
+    }
+
+    // 연락처가 하나도 없을 경우 자동 팝업 (배경은 어둡게 처리됨)
+    if (showNoContactsDialog) {
+        AlertDialog(
+            onDismissRequest = { /* 팝업 강제 유지: dismiss 안되도록 */ },
+            title = { Text("알림", color = Color.Black) },
+            text = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .verticalScroll(rememberScrollState()),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "※ 앱 이용 30일 후 확인 알람이 옵니다.\n\n※ 앱 이용 37일이 지나면 설정한 번호로 편지가 전송됩니다.\n\n※ 잘못된 번호 입력이나 내용으로 인한 피해는 책임지지 않습니다.",
+                        color = Color.Black,
+                        fontSize = 16.sp
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showNoContactsDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFDCA8))
+                ) {
+                    Text("본 내용을 확인 했습니다", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFFFFFFFF), // 팝업창 배경: 흰색
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = {
+                Text(
+                    text = "사용자 추가",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .background(Color(0xFFFFE4C4), shape = RoundedCornerShape(12.dp))
+                        .padding(16.dp)
+                ) {
+                    TextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("상대방 이름 (별명)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = phoneNumber,
+                        onValueChange = { phoneNumber = it },
+                        label = { Text("전화번호") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    RelationshipDropdown(
+                        relationships,
+                        selectedRelationship = relationship,
+                        onRelationshipSelected = { relationship = it }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    coroutineScope.launch {
+                        try {
+                            val contactRepository = ContactRepository()
+                            val newContact = Contact(name, phoneNumber, relationship)
+                            contactRepository.addContact(newContact)
+                            val updatedContacts = contactRepository.getContactsWithCoroutines()
+                            contacts.clear()
+                            contacts.addAll(updatedContacts)
+                            showDialog = false
+                            name = ""
+                            phoneNumber = ""
+                            relationship = ""
+                        } catch (e: Exception) {
+                            println("Error adding contact: ${e.message}")
+                        }
+                    }
+                }) {
+                    Text("저장")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showDialog = false }) {
+                    Text("취소")
+                }
+            }
+        )
     }
 }
 
@@ -190,7 +224,6 @@ fun RelationshipDropdown(
     onRelationshipSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-
     Box(modifier = Modifier.fillMaxWidth()) {
         TextField(
             value = selectedRelationship,
@@ -206,7 +239,6 @@ fun RelationshipDropdown(
                 .fillMaxWidth()
                 .background(Color(0xFFFFE4C4), shape = RoundedCornerShape(12.dp))
         )
-
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
@@ -214,12 +246,7 @@ fun RelationshipDropdown(
         ) {
             relationships.forEach { relationship ->
                 DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = relationship,
-                            color = Color.Black
-                        )
-                    },
+                    text = { Text(text = relationship, color = Color.Black) },
                     onClick = {
                         onRelationshipSelected(relationship)
                         expanded = false
@@ -231,26 +258,15 @@ fun RelationshipDropdown(
 }
 
 @Composable
-fun InfoCard(
-    text: String,
-    modifier:Modifier = Modifier
-) {
+fun InfoCard(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
-            .background(
-                color = Color(0xFFFFF4E6),
-                shape = RoundedCornerShape(12.dp)
-            ),
-        contentAlignment = Alignment.CenterEnd,
+            .background(color = Color(0xFFFFF4E6), shape = RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.CenterEnd
     ) {
-        Text(
-            text = text,
-            fontSize = 16.sp,
-            color = Color.Black,
-            modifier = Modifier.padding(16.dp)
-        )
+        Text(text = text, fontSize = 16.sp, color = Color.Black, modifier = Modifier.padding(16.dp))
     }
 }
 
@@ -262,12 +278,8 @@ fun AddButton(onClick: () -> Unit) {
             .size(width = 48.dp, height = 48.dp)
             .background(Color.White, shape = RoundedCornerShape(12.dp))
             .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "+",
-            fontSize = 24.sp,
-            color = Color(0xFFFFDCA8),
-        )
+        Text(text = "+", fontSize = 24.sp, color = Color(0xFFFFDCA8))
     }
 }
