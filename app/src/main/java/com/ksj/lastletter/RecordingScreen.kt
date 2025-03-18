@@ -513,66 +513,56 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // 봉투 아이콘을 클릭 가능하게 수정
                         EnvelopeIcon(
                             modifier = Modifier
                                 .size(120.dp)
                                 .padding(bottom = 24.dp)
+                                .clickable {
+                                    // 마이크 권한 확인
+                                    when {
+                                        ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED -> {
+                                            // 권한이 있으면 녹음 시작
+                                            startRecording(context, audioFilePath,
+                                                onRecorderPrepared = { recorder ->
+                                                    audioRecorder = recorder
+                                                    recordingState = RecordingState.RECORDING
+                                                    // 타이머 시작
+                                                    timerJob =
+                                                        startTimer(coroutineScope) { newTime ->
+                                                            timerSeconds = newTime
+                                                            formattedTime = formatTime(newTime)
+                                                        }
+                                                    // 파형 애니메이션 시작
+                                                    waveformJob =
+                                                        animateWaveform(coroutineScope) { newData ->
+                                                            waveformData = newData
+                                                        }
+                                                }
+                                            )
+                                        }
+
+                                        else -> {
+                                            // 권한이 없으면 요청
+                                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        }
+                                    }
+                                }
                         )
 
+                        // 안내 텍스트 변경
                         Text(
-                            text = "음성 녹음을 시작하려면\n마이크 버튼을 누르세요",
+                            text = "클릭하면 녹음 시작",
                             textAlign = TextAlign.Center,
                             fontSize = 16.sp,
                             color = Color.Black,
                             modifier = Modifier.padding(bottom = 32.dp)
                         )
 
-                        Button(
-                            onClick = {
-                                // 마이크 권한 확인
-                                when {
-                                    ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.RECORD_AUDIO
-                                    ) == PackageManager.PERMISSION_GRANTED -> {
-                                        // 권한이 있으면 녹음 시작
-                                        startRecording(context, audioFilePath,
-                                            onRecorderPrepared = { recorder ->
-                                                audioRecorder = recorder
-                                                recordingState = RecordingState.RECORDING
-                                                // 타이머 시작
-                                                timerJob = startTimer(coroutineScope) { newTime ->
-                                                    timerSeconds = newTime
-                                                    formattedTime = formatTime(newTime)
-                                                }
-                                                // 파형 애니메이션 시작
-                                                waveformJob =
-                                                    animateWaveform(coroutineScope) { newData ->
-                                                        waveformData = newData
-                                                    }
-                                            }
-                                        )
-                                    }
-
-                                    else -> {
-                                        // 권한이 없으면 요청
-                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.size(64.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFFFDCA8),
-                                contentColor = Color.Black
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Start Recording",
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                        // 마이크 버튼 제거됨
                     }
                 }
             } else if (recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED) {
@@ -583,13 +573,31 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     // 타이머 표시
-                    Text(
-                        text = formattedTime,
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 40.dp)
-                    )
+                    ) {
+                        // 빨간색 녹화 표시 점
+                        if (recordingState == RecordingState.RECORDING) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .background(Color.Red, CircleShape)
+                            )
+
+                            // 간격 추가
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else {
+                            Spacer(modifier = Modifier.width(20.dp))
+                        }
+                        // 타이머 텍스트
+                        Text(
+                            text = formattedTime,
+                            fontSize = 70.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color.Black
+                        )
+                    }
 
                     // 파형 애니메이션
                     Box(
@@ -611,30 +619,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             .padding(bottom = 32.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // 중지 버튼
-                        Button(
-                            onClick = {
-                                stopRecording(audioRecorder)
-                                audioRecorder = null
-                                recordingState = RecordingState.STOPPED
-                                timerJob?.cancel()
-                                waveformJob?.cancel()
-                                showSaveButton = true
-                            },
-                            modifier = Modifier.size(64.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Red,
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Stop Recording",
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-
                         // 일시정지/재개 버튼
                         Button(
                             onClick = {
@@ -674,6 +658,29 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 modifier = Modifier.size(32.dp)
                             )
                         }
+                        // 중지 버튼
+                        Button(
+                            onClick = {
+                                stopRecording(audioRecorder)
+                                audioRecorder = null
+                                recordingState = RecordingState.STOPPED
+                                timerJob?.cancel()
+                                waveformJob?.cancel()
+                                showSaveButton = true
+                            },
+                            modifier = Modifier.size(64.dp),
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Red,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Stop Recording",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
             } else if (recordingState == RecordingState.STOPPED && showSaveButton) {
@@ -684,7 +691,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "녹음 완료!",
+                        text = "음성편지가 작성되었습니다!",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
@@ -692,7 +699,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     )
 
                     Text(
-                        text = "녹음 시간: $formattedTime",
+                        text = "편지 시간: $formattedTime",
                         fontSize = 18.sp,
                         color = Color.Black,
                         modifier = Modifier.padding(bottom = 32.dp)
