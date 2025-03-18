@@ -92,7 +92,7 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                         } ?: ""
                     }
                     Text(
-                        text = "1번째 질문 $timeText",
+                        text = timeText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
                     )

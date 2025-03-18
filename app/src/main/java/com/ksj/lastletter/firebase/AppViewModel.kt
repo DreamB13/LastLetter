@@ -8,13 +8,10 @@ import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
 import kotlinx.coroutines.launch
 
-/**
- * 앱 전역에서 한 번만 Firebase 데이터를 로드하여 캐시로 유지하는 ViewModel
- */
 class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val contactRepository = ContactRepository()
 
-    // 연락처 목록을 앱 전역에서 캐시 (변경이 없다면 다시 로드하지 않음)
+    // 연락처 목록을 전역 상태로 보관 (앱 시작 시 한 번만 로드)
     var contacts = mutableStateOf<List<DocumentContact>>(emptyList())
         private set
 
@@ -28,7 +25,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // 데이터 변경이 발생하면 필요에 따라 새로고침할 수 있는 함수
+    // 필요시 refreshContacts()를 호출하여 다시 로드할 수 있습니다.
     fun refreshContacts() {
         loadContacts()
     }

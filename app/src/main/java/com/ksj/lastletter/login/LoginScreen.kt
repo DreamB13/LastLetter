@@ -9,25 +9,24 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.*
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.FirebaseException
+import com.google.firebase.*
 import com.google.firebase.auth.*
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.ksj.lastletter.R
-import com.kakao.sdk.common.model.ClientError
-import com.kakao.sdk.common.model.ClientErrorCause
+import com.kakao.sdk.common.model.*
 import com.kakao.sdk.user.UserApiClient
 import java.util.concurrent.TimeUnit
 
@@ -81,83 +80,149 @@ fun LoginScreen(
     // 전화번호 로그인 팝업 표시 여부
     var showPhoneDialog by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    // 전체 배경(여기서는 MaterialTheme 배경을 사용하거나, 필요시 Box로 감쌀 수 있음)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
-        // 구글 로그인 버튼
-        Image(
-            painter = painterResource(id = R.drawable.android_light_rd_si),
-            contentDescription = "Google Login",
-            modifier = Modifier
-                .clickable {
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(clientId)
-                        .requestEmail()
-                        .build()
-                    val googleSignInClient = GoogleSignIn.getClient(localContext, gso)
-                    // 기존에 로그인된 구글 계정 캐시 해제
-                    googleSignInClient.signOut().addOnCompleteListener {
-                        googleLauncher.launch(googleSignInClient.signInIntent)
-                    }
-                }
-                .height(50.dp)
-                .fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // 카카오 로그인 버튼
-        Image(
-            painter = painterResource(id = R.drawable.kakao_login_medium_narrow),
-            contentDescription = "Kakao Login",
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .clickable {
-                    if (UserApiClient.instance.isKakaoTalkLoginAvailable(localContext)) {
-                        UserApiClient.instance.loginWithKakaoTalk(localContext) { token, error ->
-                            if (error != null) {
-                                if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
-                                    Log.w("KakaoLogin", "KakaoTalk login cancelled")
-                                    return@loginWithKakaoTalk
-                                }
-                                Log.e("KakaoLogin", "KakaoTalk login failed: ${error.message}")
-                                UserApiClient.instance.loginWithKakaoAccount(localContext) { tokenAlt, errorAlt ->
-                                    if (errorAlt != null) {
-                                        Log.e("KakaoLogin", "KakaoAccount login failed: ${errorAlt.message}")
-                                    } else if (tokenAlt != null) {
-                                        navController.navigate("yoursMain")
-                                    }
-                                }
-                            } else if (token != null) {
-                                navController.navigate("yoursMain")
-                            }
-                        }
-                    } else {
-                        UserApiClient.instance.loginWithKakaoAccount(localContext) { token, error ->
-                            if (error != null) {
-                                Log.e("KakaoLogin", "KakaoAccount login failed: ${error.message}")
-                            } else if (token != null) {
-                                navController.navigate("yoursMain")
-                            }
-                        }
-                    }
-                }
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // "전화번호로 로그인" 버튼
-        Button(
-            onClick = {
-                showPhoneDialog = true
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .padding(horizontal = 16.dp)
+        // 상단(이미지 + 타이틀) / 중단(버튼들) / 하단(고객센터/문의) 순으로 구성
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("전화번호로 로그인")
+            // 상단 영역
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(40.dp))
+                // 편지 이미지는 R.drawable.XXXX 로 변경하세요 (예: R.drawable.ic_letter)
+                Image(
+                    painter = painterResource(id = R.drawable.lastletter), // 편지 이미지를 여기에
+                    contentDescription = "편지 이미지",
+                    modifier = Modifier.size(340.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // 중앙 영역: 구글/카카오/휴대폰 번호로 시작하기 버튼
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 구글 로그인 버튼
+                Button(
+                    onClick = {
+                        val gso = GoogleSignInOptions
+                            .Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(clientId)
+                            .requestEmail()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(localContext, gso)
+                        // 기존에 로그인된 구글 계정 캐시 해제
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            googleLauncher.launch(googleSignInClient.signInIntent)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "Google로 시작하기",
+                        color = Color.Black
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 카카오 로그인 버튼
+                Button(
+                    onClick = {
+                        if (UserApiClient.instance.isKakaoTalkLoginAvailable(localContext)) {
+                            UserApiClient.instance.loginWithKakaoTalk(localContext) { token, error ->
+                                if (error != null) {
+                                    if (error is ClientError && error.reason == ClientErrorCause.Cancelled) {
+                                        Log.w("KakaoLogin", "KakaoTalk login cancelled")
+                                        return@loginWithKakaoTalk
+                                    }
+                                    Log.e("KakaoLogin", "KakaoTalk login failed: ${error.message}")
+                                    UserApiClient.instance.loginWithKakaoAccount(localContext) { tokenAlt, errorAlt ->
+                                        if (errorAlt != null) {
+                                            Log.e("KakaoLogin", "KakaoAccount login failed: ${errorAlt.message}")
+                                        } else if (tokenAlt != null) {
+                                            navController.navigate("yoursMain")
+                                        }
+                                    }
+                                } else if (token != null) {
+                                    navController.navigate("yoursMain")
+                                }
+                            }
+                        } else {
+                            UserApiClient.instance.loginWithKakaoAccount(localContext) { token, error ->
+                                if (error != null) {
+                                    Log.e("KakaoLogin", "KakaoAccount login failed: ${error.message}")
+                                } else if (token != null) {
+                                    navController.navigate("yoursMain")
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFE812) // 카카오 톡 노란색
+                    )
+                ) {
+                    Text(
+                        text = "카카오로 시작하기",
+                        color = Color.Black
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 휴대폰 번호 로그인 버튼
+                Button(
+                    onClick = {
+                        showPhoneDialog = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("휴대폰 번호로 시작하기")
+                }
+            }
+
+            // 하단 영역: "고객센터/문의"
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "고객센터/문의",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+            }
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "로그인, 회원가입시 개인정보 수집 및 이용에 동의한 것으로 간주합니다.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 

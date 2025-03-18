@@ -3,16 +3,25 @@ package com.ksj.lastletter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -36,16 +45,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val context = androidx.compose.ui.platform.LocalContext.current
+            val context = LocalContext.current
             var selectedTextSize by remember { mutableStateOf(TextSizeOption.MEDIUM) }
-
             LaunchedEffect(Unit) {
                 selectedTextSize = getTextSizeOption(context)
             }
             LastLetterTheme(textSizeOption = selectedTextSize) {
                 val navController = rememberNavController()
+                // 현재 라우트를 관찰
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
+                // "login" 화면일 때는 bottomBar를 숨긴다
+                val showBottomBar = currentRoute != "login"
+
                 Scaffold(
-                    bottomBar = { BottomNavigationBar(navController = navController) }
+                    bottomBar = {
+                        if (showBottomBar) {
+                            BottomNavigationBar(navController)
+                        }
+                    }
                 ) { innerPadding ->
                     NavHost(
                         modifier = Modifier.padding(innerPadding),
@@ -56,7 +75,7 @@ class MainActivity : ComponentActivity() {
                             LoginScreen(
                                 navController = navController,
                                 loginAction = {},
-                                context = androidx.compose.ui.platform.LocalContext.current
+                                context = LocalContext.current
                             )
                         }
                         composable("dailyQuestion") {
@@ -67,7 +86,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(
                             route = "yoursContext/{contactId}",
-                            arguments = listOf(navArgument("contactId") { type = NavType.StringType })
+                            arguments = listOf(navArgument("contactId") {
+                                type = NavType.StringType
+                            })
                         ) { backStackEntry ->
                             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
                             YoursContextScreen(
@@ -82,7 +103,8 @@ class MainActivity : ComponentActivity() {
                                 navArgument("contactName") { type = NavType.StringType }
                             )
                         ) { backStackEntry ->
-                            val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
+                            val contactName =
+                                backStackEntry.arguments?.getString("contactName") ?: ""
                             RecordingScreen(
                                 navController = navController,
                                 contactName = contactName
@@ -109,11 +131,8 @@ class MainActivity : ComponentActivity() {
                             DailyQuestionDetail(navController = navController, docId = docId)
                         }
                         composable("myPage") {
-                            val appViewModel: AppViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-                            MyPageScreen(
-                                navController = navController
-
-                            )
+                            // MyPageScreen 내부에서 AppViewModel을 이용해 캐시된 데이터를 사용합니다.
+                            MyPageScreen(navController = navController)
                         }
                     }
                 }
@@ -170,14 +189,5 @@ fun BottomNavigationBar(navController: NavController) {
                 )
             }
         )
-    }
-}
-
-@Composable
-fun DummyScreen(title: String) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = title)
-        }
     }
 }

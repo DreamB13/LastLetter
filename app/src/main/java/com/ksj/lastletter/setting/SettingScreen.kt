@@ -22,6 +22,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -60,13 +61,13 @@ fun SettingsScreen(navController: NavController) {
     var editingContact by remember { mutableStateOf<DocumentContact?>(null) }
     var selectedDailyQuestionContactIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var showDailyQuestionSelectionDialog by remember { mutableStateOf(false) }
-    val selectedContactIds = remember { mutableStateListOf<String>() }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
                 val contactRepository = ContactRepository()
-                val dailyQuestionContactIds = contactRepository.getDailyQuestionContactIds() ?: emptyList()
+                // suspend 함수로 데이터를 불러옴
+                val dailyQuestionContactIds = contactRepository.getDailyQuestionContactIds()
                 val fetchedContacts = contactRepository.getContactsWithCoroutines()
                 contacts.clear()
                 contacts.addAll(fetchedContacts)
@@ -85,19 +86,13 @@ fun SettingsScreen(navController: NavController) {
             .fillMaxSize(),
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = backgroundColor
-                ),
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = backgroundColor),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "뒤로가기",
-                            tint = Color.Black
-                        )
+                        Icon(imageVector = Icons.Default.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Color.Black)
                     }
                 },
-                title = { Text(text = "설정", color = Color.Black) },
+                title = { Text(text = "설정", color = Color.Black) }
             )
         }
     ) { innerPadding ->
@@ -108,46 +103,30 @@ fun SettingsScreen(navController: NavController) {
                 .fillMaxSize()
         ) {
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(2.dp, Color(0xFFE2FFDE)),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE2FFDE)
-                )
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE2FFDE))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "일일질문 받을 사람 목록",
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Text(text = "일일질문 받을 사람 목록", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         IconButton(onClick = { showDailyQuestionSelectionDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "선택 편집",
-                                tint = Color.Black
-                            )
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "선택 편집", tint = Color.Black)
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    val selectedNames =
-                        contacts.filter { selectedDailyQuestionContactIds.contains(it.id) }
-                            .joinToString { it.contact.name }
+                    val selectedNames = contacts.filter { selectedDailyQuestionContactIds.contains(it.id) }
+                        .joinToString { it.contact.name }
                     if (selectedNames.isEmpty()) {
                         Text(text = "선택된 사람이 없습니다.")
                     } else {
                         contacts.forEach { documentContact ->
                             if (selectedDailyQuestionContactIds.contains(documentContact.id)) {
-                                Text(
-                                    text = documentContact.contact.name,
-                                    color = Color.Black
-                                )
+                                Text(text = documentContact.contact.name, color = Color.Black)
                             }
                         }
                     }
@@ -155,14 +134,10 @@ fun SettingsScreen(navController: NavController) {
             }
 
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
                 shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(2.dp, Color(0xFFE9EAFF)),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFE9EAFF)
-                )
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE9EAFF))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(text = "편지 받을 사람 목록")
@@ -170,7 +145,7 @@ fun SettingsScreen(navController: NavController) {
                     if (contacts.isEmpty()) {
                         Text(text = "목록이 비어 있습니다.")
                     } else {
-                        contacts.forEachIndexed { index, documentContact ->
+                        contacts.forEachIndexed { _, documentContact ->
                             ContactRow(documentContact = documentContact) {
                                 editingContact = documentContact
                             }
@@ -278,31 +253,25 @@ fun DailyQuestionSelectionDialog(
             Column {
                 contacts.forEach { documentContact ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (tempSelectedIds.contains(documentContact.id)) {
-                                    tempSelectedIds.remove(documentContact.id)
-                                } else {
-                                    tempSelectedIds.add(documentContact.id)
-                                }
-                                tempSelectedIds = tempSelectedIds.toMutableList()
-                            }
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        androidx.compose.material3.RadioButton(
-                            selected = tempSelectedIds.contains(documentContact.id),
-                            onClick = null,
-                            colors = androidx.compose.material3.RadioButtonDefaults.colors(
-                                selectedColor = Color(0xFF9AD28A)
-                            )
+                        Checkbox(
+                            checked = tempSelectedIds.contains(documentContact.id),
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    if (!tempSelectedIds.contains(documentContact.id)) {
+                                        tempSelectedIds.add(documentContact.id)
+                                    }
+                                } else {
+                                    tempSelectedIds.remove(documentContact.id)
+                                }
+                                tempSelectedIds = tempSelectedIds.toMutableList()
+                            },
+                            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF9AD28A))
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = documentContact.contact.name,
-                            color = Color.Black
-                        )
+                        Text(text = documentContact.contact.name, color = Color.Black)
                     }
                 }
             }
@@ -323,9 +292,7 @@ fun DailyQuestionSelectionDialog(
 @Composable
 fun ContactRow(documentContact: DocumentContact, onEditClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -410,9 +377,7 @@ fun EditContactDialog(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text("삭제 확인") },
-            text = {
-                Text("정말로 삭제 하시겠습니까?\n저장 되어 있던 정보(이름, 전화번호, 관계)와 작성한 편지가 모두 삭제됩니다")
-            },
+            text = { Text("정말로 삭제 하시겠습니까?\n저장 되어 있던 정보(이름, 전화번호, 관계)와 작성한 편지가 모두 삭제됩니다") },
             confirmButton = {
                 Button(onClick = {
                     onDelete()
@@ -432,11 +397,12 @@ fun EditContactDialog(
 
 @Composable
 fun Settiingitem(text: String, click: () -> Unit = {}) {
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
-        .padding(16.dp)
-        .clickable { click() }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
+            .padding(16.dp)
+            .clickable { click() }
     ) {
         Text(text = text)
         Icon(

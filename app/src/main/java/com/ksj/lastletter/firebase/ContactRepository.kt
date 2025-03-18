@@ -84,7 +84,24 @@ class ContactRepository {
         }
     }
 
-    // 일일질문 받을 사람 설정 – 사용자별로 "DailyQuestionConfig/selectedContacts"에 저장
+    // suspend 함수를 사용해 일일질문 받을 사람 목록을 불러옵니다.
+    suspend fun getDailyQuestionContactIds(): List<String> = withContext(Dispatchers.IO) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@withContext emptyList()
+        val dailyQuestionRef = db.collection("users").document(uid)
+            .collection("DailyQuestionConfig").document("selectedContacts")
+        try {
+            val document = dailyQuestionRef.get().await()
+            if (document != null && document.exists()) {
+                document.get("selectedIds") as? List<String> ?: emptyList()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("Error getting daily question contacts: ${e.message}")
+            emptyList()
+        }
+    }
+
     fun updateDailyQuestionContacts(newSelectedIds: List<String>) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val dailyQuestionRef = db.collection("users").document(uid)
@@ -97,24 +114,4 @@ class ContactRepository {
                 println("Error updating daily question contacts: $e")
             }
     }
-
-    fun getDailyQuestionContactIds(): List<String> {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return emptyList()
-        val dailyQuestionRef = db.collection("users").document(uid)
-            .collection("DailyQuestionConfig").document("selectedContacts")
-        var selectedIds: List<String> = emptyList()
-        dailyQuestionRef.get()
-            .addOnSuccessListener { document ->
-                if (document != null && document.exists()) {
-                    selectedIds = document.get("selectedIds") as? List<String> ?: emptyList()
-                } else {
-                    println("No such document")
-                }
-            }
-            .addOnFailureListener { e ->
-                println("Error getting document: $e")
-            }
-        return selectedIds
-    }
 }
-

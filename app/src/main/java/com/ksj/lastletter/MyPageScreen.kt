@@ -27,23 +27,30 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ksj.lastletter.AppViewModel
+import com.ksj.lastletter.firebase.DocumentContact
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPageScreen(navController: NavController) {
-    // 출석 관련 상태
+    // AppViewModel을 내부에서 불러와서 캐시된 연락처 목록을 사용합니다.
+    val appViewModel: AppViewModel = viewModel()
+    val contacts: List<DocumentContact> = appViewModel.contacts.value
+
     var currentAttendance by remember { mutableStateOf(4) }
     val totalAttendance = 10
-
-    // 전체 배경색(이미지의 연한 베이지/크림 계열)
     val backgroundColor = Color(0xFFFFF5E9)
 
     Scaffold(
@@ -55,22 +62,20 @@ fun MyPageScreen(navController: NavController) {
                 actions = {
                     IconButton(onClick = { /* 알림 아이콘 클릭 처리 */ }) {
                         Icon(
-                            imageVector = Icons.Default.Notifications,
+                            imageVector = Icons.Filled.Notifications,
                             contentDescription = "알림",
                             tint = Color.Black
                         )
                     }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
+                            imageVector = Icons.Filled.Settings,
                             contentDescription = "설정",
                             tint = Color.Black
                         )
                     }
                 },
-                colors = TopAppBarDefaults.smallTopAppBarColors(
-                    containerColor = backgroundColor
-                )
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = backgroundColor)
             )
         },
         containerColor = backgroundColor
@@ -87,7 +92,6 @@ fun MyPageScreen(navController: NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.Top
             ) {
-                // 1) 출석 체크 영역
                 Text(
                     text = "출석 체크",
                     style = MaterialTheme.typography.bodyMedium,
@@ -95,33 +99,26 @@ fun MyPageScreen(navController: NavController) {
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // 진행 상황 (예: 4/10)
                     Text(
-                        text = "${currentAttendance}/${totalAttendance}",
+                        text = "$currentAttendance/$totalAttendance",
                         color = Color.Gray
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-
-                    // 진행도 표시 (LinearProgressIndicator)
                     val progress = currentAttendance.toFloat() / totalAttendance
                     LinearProgressIndicator(
                         progress = progress,
                         modifier = Modifier
                             .weight(1f)
                             .height(8.dp),
-                        color = Color(0xFF86CE86), // 원하는 진행 색상
-                        trackColor = Color(0xFFECECEC) // 남은 영역 색상
+                        color = Color(0xFF86CE86),
+                        trackColor = Color(0xFFECECEC)
                     )
-
                     Spacer(modifier = Modifier.width(8.dp))
-
                     Button(
                         onClick = {
-                            // 출석하기 로직 (최대값 초과하지 않도록 예시 처리)
                             if (currentAttendance < totalAttendance) {
                                 currentAttendance++
                             }
@@ -130,37 +127,27 @@ fun MyPageScreen(navController: NavController) {
                         Text("출석하기")
                     }
                 }
-
-                // 구분선
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider(color = Color.LightGray, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // 2) 상품(?) 영역: 편지 보낼 사람 추가 / 편지 10장 추가 / 골드 회원
-                // 첫 번째 아이템
+                // 기존 상품 영역 UI
                 ItemRow(
                     title = "편지 보낼 사람 추가",
                     price = "4,900원"
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                // 두 번째 아이템
                 ItemRow(
                     title = "편지 10장 추가",
                     price = "4,900원"
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                // 세 번째 아이템
                 ItemRow(
                     title = "골드 회원",
                     price = "월 1,900원"
                 )
-
-                // 구분선
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider(color = Color.LightGray, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // 3) 하단 메뉴: 자주 묻는 질문 / 문의하기 / 질문 제안하기 / 버전 정보
                 MenuItem("자주 묻는 질문") { /* 클릭 처리 */ }
                 Spacer(modifier = Modifier.height(8.dp))
                 MenuItem("문의하기") { /* 클릭 처리 */ }
@@ -168,6 +155,20 @@ fun MyPageScreen(navController: NavController) {
                 MenuItem("질문 제안하기") { /* 클릭 처리 */ }
                 Spacer(modifier = Modifier.height(8.dp))
                 MenuItem("버전 정보") { /* 클릭 처리 */ }
+                // (옵션) 캐시된 연락처 목록이 있다면 아래에 출력할 수 있습니다.
+                if (contacts.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = "연락처 목록", fontSize = 18.sp, color = Color.Black)
+                    contacts.forEach { documentContact ->
+                        InfoCard(
+                            text = documentContact.contact.name,
+                            modifier = Modifier.clickable {
+                                navController.navigate("yoursContext/${documentContact.id}")
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
             }
         }
     }
@@ -176,21 +177,12 @@ fun MyPageScreen(navController: NavController) {
 @Composable
 fun ItemRow(title: String, price: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            fontSize = 16.sp,
-            color = Color.Black
-        )
-        Text(
-            text = price,
-            fontSize = 16.sp,
-            color = Color.Gray
-        )
+        Text(text = title, fontSize = 16.sp, color = Color.Black)
+        Text(text = price, fontSize = 16.sp, color = Color.Gray)
     }
 }
 
@@ -200,11 +192,23 @@ fun MenuItem(text: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
+            .background(Color(0xFFFFF5E9), shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .padding(16.dp)
     ) {
-        Text(
-            text = text,
-            fontSize = 16.sp,
-            color = Color.Black
-        )
+        Text(text = text, fontSize = 16.sp, color = Color.Black)
+    }
+}
+
+@Composable
+fun InfoCard(text: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(60.dp)
+            .background(Color(0xFFFFF4E6), shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .padding(16.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(text = text, fontSize = 16.sp, color = Color.Black)
     }
 }
