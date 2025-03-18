@@ -21,11 +21,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -127,7 +130,9 @@ fun RecordingScreen(navController: NavController, contactName: String) {
         color = Color(0xFFFFFBF5)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.Start
         ) {
             Row(
@@ -153,32 +158,44 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+                    Button(
+                        onClick = {navController.navigate("inputtextscreen")},
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                    ) {
+                        Text("텍스트로 입력하기")
+                    }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         EnvelopeIcon(
-                            modifier = Modifier.size(180.dp).clickable {
-                                if (ContextCompat.checkSelfPermission(
-                                        context, Manifest.permission.RECORD_AUDIO
-                                    ) == PackageManager.PERMISSION_GRANTED
-                                ) {
-                                    startRecording(context, audioFilePath,
-                                        onRecorderPrepared = { recorder ->
-                                            mediaRecorder = recorder
-                                            recordingState = RecordingState.RECORDING
+                            modifier = Modifier
+                                .size(180.dp)
+                                .clickable {
+                                    if (ContextCompat.checkSelfPermission(
+                                            context, Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                    ) {
+                                        startRecording(context, audioFilePath,
+                                            onRecorderPrepared = { recorder ->
+                                                mediaRecorder = recorder
+                                                recordingState = RecordingState.RECORDING
 
-                                            timerJob = startTimer(coroutineScope) { newTime ->
-                                                timerSeconds = newTime
-                                                formattedTime = formatTime(newTime)
-                                            }
+                                                timerJob = startTimer(coroutineScope) { newTime ->
+                                                    timerSeconds = newTime
+                                                    formattedTime = formatTime(newTime)
+                                                }
 
-                                            waveformJob = animateWaveform(coroutineScope) { newData ->
-                                                waveformData = newData
+                                                waveformJob =
+                                                    animateWaveform(coroutineScope) { newData ->
+                                                        waveformData = newData
+                                                    }
                                             }
-                                        }
-                                    )
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        )
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
                                 }
-                            }
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(text = "클릭하면 녹음 시작", color = Color.Black)
@@ -257,9 +274,10 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                                 formattedTime = formatTime(newTime)
                                             }
 
-                                            waveformJob = animateWaveform(coroutineScope) { newData ->
-                                                waveformData = newData
-                                            }
+                                            waveformJob =
+                                                animateWaveform(coroutineScope) { newData ->
+                                                    waveformData = newData
+                                                }
                                         },
                                         onCompletion = {
                                             recordingState = RecordingState.STOPPED
@@ -290,6 +308,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
                                     }
+
                                     RecordingState.PAUSED -> {
                                         resumeRecording(mediaRecorder)
                                         recordingState = RecordingState.RECORDING
@@ -304,12 +323,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             waveformData = newData
                                         }
                                     }
+
                                     RecordingState.PLAYING -> {
                                         pausePlayback(mediaPlayer)
                                         recordingState = RecordingState.STOPPED
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
                                     }
+
                                     else -> {}
                                 }
                             },
@@ -342,6 +363,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         waveformJob?.cancel()
                                         recognizedText = "녹음된 내용이 텍스트로 변환되었습니다."
                                     }
+
                                     RecordingState.PLAYING -> {
                                         stopPlayback(mediaPlayer)
                                         mediaPlayer = null
@@ -349,6 +371,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         timerJob?.cancel()
                                         waveformJob?.cancel()
                                     }
+
                                     else -> {}
                                 }
                             },
@@ -366,7 +389,8 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         RecordingState.RECORDING,
                                         RecordingState.PAUSED,
                                         RecordingState.PLAYING
-                                    )) Color(0xFFFFDCA8) else Color.Gray,
+                                    )
+                                ) Color(0xFFFFDCA8) else Color.Gray,
                                 modifier = Modifier.size(36.dp)
                             )
                         }

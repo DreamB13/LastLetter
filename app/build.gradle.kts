@@ -115,4 +115,10 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.3")
     implementation("androidx.datastore:datastore-preferences-core:1.1.3")
 
+    //FastAPI전송 - retrofit
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+
 }

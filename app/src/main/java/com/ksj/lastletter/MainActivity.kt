@@ -111,6 +111,9 @@ class MainActivity : ComponentActivity() {
                         composable("myPage") {
                             MyPageScreen(navController = navController)
                         }
+                        composable("inputtextscreen") {
+                            InputTextScreen(navController)
+                        }
                     }
                 }
             }
