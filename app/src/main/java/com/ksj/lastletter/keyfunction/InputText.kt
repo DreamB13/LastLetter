@@ -221,7 +221,7 @@ fun InputTextScreen(
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(4f)
+                    .weight(5f)
             ) {
                 Button(
                     onClick = {/*광고 띄우면서 최대 글자수 1000으로 변경*/
