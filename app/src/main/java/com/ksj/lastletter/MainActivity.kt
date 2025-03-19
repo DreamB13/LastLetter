@@ -70,10 +70,7 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("contactId") { type = NavType.StringType })
                         ) { backStackEntry ->
                             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                            YoursContextScreen(
-                                navController = navController,
-                                contactId = contactId
-                            )
+                            YoursContextScreen(contactId= contactId, navController = navController)
                         }
                         composable(
                             route = "recording/{contactId}/{contactName}",
@@ -83,10 +80,7 @@ class MainActivity : ComponentActivity() {
                             )
                         ) { backStackEntry ->
                             val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
-                            RecordingScreen(
-                                navController = navController,
-                                contactName = contactName
-                            )
+                            RecordingScreen(navController, contactName)
                         }
                         composable("settings") {
                             SettingsScreen(navController = navController)
@@ -108,8 +102,8 @@ class MainActivity : ComponentActivity() {
                             val docId = backStackEntry.arguments?.getString("docId") ?: ""
                             DailyQuestionDetail(navController = navController, docId = docId)
                         }
-                        composable("myPage") {
-                            MyPageScreen(navController = navController)
+                        composable("shopping") {
+                            DummyScreen(title = "우리의 돈줄")
                         }
                         composable("inputtextscreen") {
                             InputTextScreen(navController)
@@ -160,8 +154,8 @@ fun BottomNavigationBar(navController: NavController) {
             }
         )
         NavigationBarItem(
-            selected = currentRoute == "myPage",
-            onClick = { navController.navigate("myPage") },
+            selected = currentRoute == "shopping",
+            onClick = { navController.navigate("shopping") },
             icon = {
                 Icon(
                     imageVector = Icons.Filled.ShoppingCart,
