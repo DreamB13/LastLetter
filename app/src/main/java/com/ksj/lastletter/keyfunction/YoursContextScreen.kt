@@ -1,11 +1,13 @@
 package com.ksj.lastletter.keyfunction
 
 import android.net.Uri
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -152,7 +154,8 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                 val date = doc.getString("date") ?: ""
                                 val title = doc.getString("title") ?: ""
                                 val docId = doc.id
-                                val emotion = doc.getString("emotion") ?: "중립" // emotion 정보 추가로 불러오기
+                                val emotion =
+                                    doc.getString("emotion") ?: "중립" // emotion 정보 추가로 불러오기
                                 fetchedLetters.add(LetterInfo(date, title, docId, emotion))
                             }
                             letterData = fetchedLetters
@@ -163,24 +166,33 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 }
             }
 
+            Column(modifier = Modifier.verticalScroll(ScrollState(0))) {
+
 // 편지 목록 표시 부분 수정
-            if (letterData.isEmpty()) {
-                Text(
-                    text = "아직 작성된 편지가 없습니다.",
-                    modifier = Modifier.padding(top = 16.dp),
-                    color = Color.Gray
-                )
-            } else {
-                // 수정된 코드
-                letterData.forEach { letterInfo ->
-                    // 카드에 클릭 기능 추가
-                    Box(modifier = Modifier.clickable {
-                        // InputText 화면으로 이동
-                        navController.navigate("inputtextscreen/${Uri.encode(letterInfo.docId)}/${Uri.encode(contactId)}/${Uri.encode("fromfirebase")}")
-                    }) {
-                        ContextInfoCard(letterInfo.date, letterInfo.title, letterInfo.emotion)
+                if (letterData.isEmpty()) {
+                    Text(
+                        text = "아직 작성된 편지가 없습니다.",
+                        modifier = Modifier.padding(top = 16.dp),
+                        color = Color.Gray
+                    )
+                } else {
+                    // 수정된 코드
+                    letterData.forEach { letterInfo ->
+                        // 카드에 클릭 기능 추가
+                        Box(modifier = Modifier.clickable {
+                            // InputText 화면으로 이동
+                            navController.navigate(
+                                "inputtextscreen/${Uri.encode(letterInfo.docId)}/${
+                                    Uri.encode(
+                                        contactId
+                                    )
+                                }/${Uri.encode("fromfirebase")}"
+                            )
+                        }) {
+                            ContextInfoCard(letterInfo.date, letterInfo.title, letterInfo.emotion)
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
