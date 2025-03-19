@@ -887,7 +887,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
             if (showSaveDialog) {
                 var selectedOption by remember { mutableStateOf(0) }
                 // 두 번째 옵션 텍스트 상태 추가
-
+                var customDateText by remember { mutableStateOf("") }
 
                 AlertDialog(
                     onDismissRequest = { showSaveDialog = false },
@@ -971,12 +971,19 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                     )
                                 }
                             }
+
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     },
                     confirmButton = {
                         Button(
                             onClick = {
+                                // 현재 날짜 가져오기
+                                val currentDate = java.text.SimpleDateFormat(
+                                    "MM월 dd일",
+                                    java.util.Locale.getDefault()
+                                ).format(java.util.Date())
+
                                 if (selectedOption == 0) {
                                     showSaveDialog = false
                                     isLoading = true
