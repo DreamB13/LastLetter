@@ -373,7 +373,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
 
                 Text(
                     text = contactName,
-                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
@@ -522,7 +521,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                     ) {
-                        Text("텍스트로 입력하기")
+                        Text("텍스트로 입력하기", color = Color.Black)
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         // 봉투 아이콘을 클릭 가능하게 수정
@@ -569,7 +568,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         Text(
                             text = "클릭하면 녹음 시작",
                             textAlign = TextAlign.Center,
-                            fontSize = 16.sp,
                             color = Color.Black,
                             modifier = Modifier.padding(bottom = 32.dp)
                         )
@@ -749,7 +747,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 contentDescription = "Play Recording",
                                 modifier = Modifier.padding(end = 8.dp)
                             )
-                            Text("재생")
+                            Text("재생", color = Color.Black)
                         }
 
                         // STT 변환 버튼
@@ -820,7 +818,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             contentDescription = "Stop Playback",
                             modifier = Modifier.padding(end = 8.dp)
                         )
-                        Text("정지")
+                        Text("정지", color = Color.Black)
                     }
                 }
             } else if (recordingState == RecordingState.CONVERTING) {
