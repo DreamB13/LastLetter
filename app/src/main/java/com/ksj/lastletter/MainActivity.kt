@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                // "login" 화면일 때는 bottomBar를 숨긴다
                 val showBottomBar = currentRoute != "login"
 
                 Scaffold(
