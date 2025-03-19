@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
@@ -103,7 +104,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     var selectedEmotion by remember { mutableStateOf("") }
     var showExitDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
-
+    if (isLoading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("분석 중...") },
+            text = { CircularProgressIndicator() },
+            confirmButton = {}
+        )
+    }
 
     // 상태 관리 변수들
     var recordingState by remember { mutableStateOf(RecordingState.NOT_STARTED) }
@@ -121,12 +129,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     // 코루틴 작업 관리
     var timerJob by remember { mutableStateOf<Job?>(null) }
     var waveformJob by remember { mutableStateOf<Job?>(null) }
-
-    //현재 날짜
-    val currentDate = java.text.SimpleDateFormat(
-        "MM월 dd일",
-        java.util.Locale.getDefault()
-    ).format(java.util.Date())
 
     // Google STT API Key
     val googleAPIKey = try {
@@ -915,7 +917,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         selectedColor = Color(0xFFFFDCA8)
                                     )
                                 )
-
                                 Text(
                                     text = "자동 저장",
                                     fontSize = 16.sp,
@@ -975,24 +976,46 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         Button(
                             onClick = {
                                 if (selectedOption == 0) {
+                                    showSaveDialog = false
+                                    isLoading = true
                                     //자동저장 선택
                                     RunModel(
                                         coroutineScope,
                                         recognizedText,
                                         navController,
-                                        { isLoading = it },
                                         { customDateText = it },
                                         { selectedEmotion = it }
                                     )
+                                    isLoading = false
                                 } else {
-                                    navController.navigate(
-                                        "inputtextscreen/${
-                                            Uri.encode(
-                                                recognizedText
-                                            )
-                                        }/${Uri.encode(customDateText)}/${Uri.encode(selectedEmotion)}"
-                                    )
                                     showSaveDialog = false
+                                    coroutineScope.launch {
+                                        isLoading = true
+                                        try {
+                                            val response =
+                                                RetrofitInstance2.api.analyzeText(
+                                                    EmotionRequest(
+                                                        recognizedText
+                                                    )
+                                                )
+                                            selectedEmotion = response.emotion  // 서버 응답을 표시
+                                        } catch (e: Exception) {
+                                            selectedEmotion = "오류 발생: ${e.message}"
+                                        } finally {
+                                            isLoading = false
+                                            navController.navigate(
+                                                "inputtextscreen/${
+                                                    Uri.encode(
+                                                        recognizedText
+                                                    )
+                                                }/${Uri.encode(customDateText)}/${
+                                                    Uri.encode(
+                                                        selectedEmotion
+                                                    )
+                                                }"
+                                            )
+                                        }
+                                    }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -1001,6 +1024,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             )
                         ) {
                             Text("저장")
+                            if (isLoading) {
+                                AlertDialog(
+                                    onDismissRequest = {},
+                                    title = { Text("분석 중...") },
+                                    text = { CircularProgressIndicator() },
+                                    confirmButton = {}
+                                )
+                            }
                         }
                     },
                     dismissButton = {
@@ -1024,12 +1055,10 @@ fun RunModel(
     coroutineScope: CoroutineScope,
     recognizedText: String,
     navController: NavController,
-    onLoading: (Boolean) -> Unit,
     onCustomDateResult: (String) -> Unit,
     onEmotionResult: (String) -> Unit
 ) {
     coroutineScope.launch {
-        onLoading(true)
 
         val customDateDeferred = async {
             try {
@@ -1039,7 +1068,6 @@ fun RunModel(
                 "오류 발생: ${e.message}"
             }
         }
-
         val emotionDeferred = async {
             try {
                 val response = RetrofitInstance2.api.analyzeText(EmotionRequest(recognizedText))
@@ -1055,10 +1083,12 @@ fun RunModel(
         onCustomDateResult(customDate)
         onEmotionResult(selectedEmotion)
 
-        onLoading(false)
-
         navController.navigate(
-            "inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDate)}/${Uri.encode(selectedEmotion)}"
+            "inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDate)}/${
+                Uri.encode(
+                    selectedEmotion
+                )
+            }"
         )
     }
 }
