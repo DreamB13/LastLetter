@@ -146,17 +146,22 @@ class MainActivity : ComponentActivity() {
                         composable("phoneTerm") {
                             PhoneTermScreen(navController = navController)
                         }
-                        composable("inputtextscreen/{recognizedText}/{customDateText}/{currentDate}") { backStackEntry ->
+                        composable("inputtextscreen/{recognizedText}/{customDateText}/{selectedEmotion}") { backStackEntry ->
                             val recognizedText =
                                 backStackEntry.arguments?.getString("recognizedText")
                                     ?.let { Uri.decode(it) } ?: ""
                             val customDateText =
                                 backStackEntry.arguments?.getString("customDateText")
                                     ?.let { Uri.decode(it) } ?: ""
-                            val currentDate =
-                                backStackEntry.arguments?.getString("currentDate")
+                            val selectedEmotion =
+                                backStackEntry.arguments?.getString("selectedEmotion")
                                     ?.let { Uri.decode(it) } ?: ""
-                            InputTextScreen(navController, recognizedText, customDateText,currentDate)
+                            InputTextScreen(
+                                navController,
+                                recognizedText,
+                                customDateText,
+                                selectedEmotion
+                            )
                         }
                     }
                 }

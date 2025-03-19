@@ -56,17 +56,28 @@ import com.ksj.lastletter.FastAPI.TextRequest
 import kotlinx.coroutines.launch
 
 @Composable
-fun InputTextScreen(navController: NavController, recognizedText: String, customDateText: String,currentDate:String) {
+fun InputTextScreen(
+    navController: NavController,
+    recognizedText: String,
+    customDateText: String,
+    selectedEmotion: String
+) {
     var titleText by remember { mutableStateOf(customDateText) }
     var maxTextLength by remember { mutableIntStateOf(500) }
-    var selectedEmotion by remember { mutableStateOf("기쁨") }
     var letterText by remember { mutableStateOf(recognizedText) }
     var isLoading by remember { mutableStateOf(false) }
+    var emotion by remember { mutableStateOf(selectedEmotion) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
         Toast.makeText(context, "글자 수를 초과하셨습니다.", Toast.LENGTH_SHORT).show()
     }
+    val backStackEntry = navController.currentBackStackEntry
+    val arguments = backStackEntry?.arguments
+    val currentDate = java.text.SimpleDateFormat(
+        "MM월 dd일",
+        java.util.Locale.getDefault()
+    ).format(java.util.Date())
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
@@ -117,8 +128,8 @@ fun InputTextScreen(navController: NavController, recognizedText: String, custom
             ) {
                 Spacer(modifier = Modifier.weight(4f))
                 EmotionSelector(
-                    selectedEmotion = selectedEmotion,
-                    onEmotionSelected = { newEmotion -> selectedEmotion = newEmotion },
+                    selectedEmotion = emotion,
+                    onEmotionSelected = { newEmotion -> emotion = newEmotion },
                     modifier = Modifier.weight(1.5f)
                 )
             }
@@ -182,7 +193,8 @@ fun InputTextScreen(navController: NavController, recognizedText: String, custom
                     )
                 }
                 Button(
-                    onClick = {/*저장 기능인데 감정 저장도 추가해줘야됨*/
+                    onClick = {
+                        // Firebase에 저장
                         val db = FirebaseFirestore.getInstance()
                         val userId = FirebaseAuth.getInstance().currentUser?.uid
 
@@ -190,27 +202,52 @@ fun InputTextScreen(navController: NavController, recognizedText: String, custom
                             // 편지 데이터 생성
                             val letterData = hashMapOf(
                                 "date" to currentDate,
-                                "title" to customDateText,
-                                "content" to recognizedText,
+                                "title" to titleText,
+                                "content" to letterText,
+                                "emotion" to emotion,
                                 "timestamp" to com.google.firebase.Timestamp.now()
                             )
 
                             // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                            val contactId = navController.currentBackStackEntry
-                                ?.arguments?.getString("contactId") ?: ""
+                            val contactId = arguments?.getString("contactId")
+                                ?: navController.previousBackStackEntry?.arguments?.getString("contactId")
+                                ?: ""
 
                             db.collection("users").document(userId)
                                 .collection("Yours").document(contactId)
                                 .collection("letters").add(letterData)
+// 저장 버튼의 onClick 부분만 수정
                                 .addOnSuccessListener {
-                                    Log.d(
-                                        "RecordingScreen",
-                                        "Letter saved successfully"
-                                    )
+                                    Log.d("InputTextScreen", "Letter saved successfully")
+
+                                    // 저장 후 YoursContextScreen으로 직접 이동하도록 수정
+                                    try {
+                                        // contactId를 사용하여 YoursContextScreen으로 이동
+                                        navController.navigate("yoursContext/${contactId}") {
+                                            // 불필요한 화면 스택 제거
+                                            popUpTo("yoursContext/${contactId}") {
+                                                inclusive = false
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e("InputTextScreen", "Navigation error: ${e.message}")
+                                        // 오류 발생 시 대체 네비게이션
+                                        navController.popBackStack()
+                                    }
                                 }
+
                                 .addOnFailureListener { e ->
-                                    Log.e("RecordingScreen", "Error saving letter", e)
+                                    Log.e("InputTextScreen", "Error saving letter", e)
+                                    // 에러 처리
+                                    Toast.makeText(
+                                        context,
+                                        "저장 실패: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
+                        } else {
+                            // 로그인되지 않은 경우
+                            Toast.makeText(context, "로그인이 필요합니다", Toast.LENGTH_SHORT).show()
                         }
                     },
                     shape = RoundedCornerShape(10.dp),
@@ -251,9 +288,9 @@ fun InputTextScreen(navController: NavController, recognizedText: String, custom
                             try {
                                 val response =
                                     RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
-                                selectedEmotion = response.emotion  // 서버 응답을 표시
+                                emotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
-                                selectedEmotion = "오류 발생: ${e.message}"
+                                emotion = "오류 발생: ${e.message}"
                             } finally {
                                 isLoading = false
                             }
