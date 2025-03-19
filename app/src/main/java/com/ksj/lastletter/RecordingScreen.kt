@@ -1,18 +1,16 @@
 package com.ksj.lastletter
 
 import android.Manifest
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.ui.text.style.TextAlign
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.Dispatchers
+import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioRecord
 import android.media.MediaPlayer
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,17 +24,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,10 +55,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -502,7 +513,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Button(
-                        onClick = {navController.navigate("inputtextscreen")},
+                        onClick = { navController.navigate("inputtextscreen") },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                         modifier = Modifier
@@ -848,7 +859,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
             if (showSaveDialog) {
                 var selectedOption by remember { mutableStateOf(0) }
                 // 두 번째 옵션 텍스트 상태 추가
-                var customDateText by remember { mutableStateOf("제목을 입력하세요") }
+                var customDateText by remember { mutableStateOf("") }
 
                 AlertDialog(
                     onDismissRequest = { showSaveDialog = false },
@@ -908,7 +919,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 // 선택되었을 때는 편집 가능한 TextField로 변경
                                 if (selectedOption == 1) {
                                     TextField(
-                                        value = "",
+                                        value = customDateText,
                                         onValueChange = { customDateText = it },
                                         modifier = Modifier
                                             .fillMaxWidth()
