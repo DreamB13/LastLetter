@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,11 +43,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.FastAPI.EmotionRequest
@@ -54,6 +53,7 @@ import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.FastAPI.TextRequest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @Composable
 fun InputTextScreen(
@@ -62,11 +62,11 @@ fun InputTextScreen(
     customDateText: String,
     selectedEmotion: String
 ) {
-    var titleText by remember { mutableStateOf(customDateText) }
+    var titleText by remember { mutableStateOf("") }
     var maxTextLength by remember { mutableIntStateOf(500) }
-    var letterText by remember { mutableStateOf(recognizedText) }
+    var letterText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
-    var emotion by remember { mutableStateOf(selectedEmotion) }
+    var emotion by remember { mutableStateOf("") }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
@@ -74,10 +74,55 @@ fun InputTextScreen(
     }
     val backStackEntry = navController.currentBackStackEntry
     val arguments = backStackEntry?.arguments
-    val currentDate = java.text.SimpleDateFormat(
-        "MM월 dd일",
-        java.util.Locale.getDefault()
-    ).format(java.util.Date())
+    var currentDate by remember {
+        mutableStateOf(
+            java.text.SimpleDateFormat("MM월 dd일", java.util.Locale.getDefault())
+                .format(java.util.Date())
+        )
+    }
+    // Firebase에서 데이터 로드 여부 확인
+    if (selectedEmotion == "fromfirebase") {
+        // recognizedText는 docId, customDateText는 contactId로 사용
+        val docId = recognizedText
+        val contactId = customDateText
+
+        // Firebase에서 데이터 가져오기
+        LaunchedEffect(docId, contactId) {
+            isLoading = true
+            try {
+                val userId = FirebaseAuth.getInstance().currentUser?.uid
+                if (userId != null) {
+                    val db = FirebaseFirestore.getInstance()
+                    val docRef = db.collection("users").document(userId)
+                        .collection("Yours").document(contactId)
+                        .collection("letters").document(docId)
+
+                    val document = docRef.get().await()
+                    if (document.exists()) {
+                        titleText = document.getString("title") ?: ""
+                        letterText = document.getString("content") ?: ""
+                        emotion = document.getString("emotion") ?: ""
+                        currentDate = document.getString("date") ?: ""
+                    } else {
+                        Toast.makeText(context, "문서를 찾을 수 없습니다", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(context, "로그인이 필요합니다", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "데이터 로드 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                isLoading = false
+            }
+        }
+    } else {
+        // 기존 방식대로 파라미터에서 초기화
+        titleText = customDateText
+        letterText = recognizedText
+        emotion = selectedEmotion
+    }
+
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)

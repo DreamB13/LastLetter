@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
@@ -94,7 +94,7 @@ fun YoursMainScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = { navController.navigate("recording/1/1") }) {
+            Button(onClick = {navController.navigate("recording/1/1")}) {
                 Text("바로가기")
             }
             contacts.forEach { documentContact ->
