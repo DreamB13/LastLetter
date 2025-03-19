@@ -68,8 +68,10 @@ import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.FastAPI.TextRequest
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -974,39 +976,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             onClick = {
                                 if (selectedOption == 0) {
                                     //자동저장 선택
-                                    coroutineScope.launch {
-                                        isLoading = true
-                                        try {
-                                            val response =
-                                                RetrofitClient.apiService.generateText(TextRequest(recognizedText))
-                                            customDateText = response.generated_text  // 서버 응답을 표시
-                                        } catch (e: Exception) {
-                                            customDateText = "오류 발생: ${e.message}"
-                                        } finally {
-                                            isLoading = false
-                                        }
-                                        isLoading = true
-                                        try {
-                                            val response =
-                                                RetrofitInstance2.api.analyzeText(
-                                                    EmotionRequest(
-                                                        recognizedText
-                                                    )
-                                                )
-                                            selectedEmotion = response.emotion  // 서버 응답을 표시
-                                        } catch (e: Exception) {
-                                            selectedEmotion = "오류 발생: ${e.message}"
-                                        } finally {
-                                            isLoading = false
-                                            navController.navigate(
-                                                "inputtextscreen/${
-                                                    Uri.encode(
-                                                        recognizedText
-                                                    )
-                                                }/${Uri.encode(customDateText)}/${Uri.encode(selectedEmotion)}"
-                                            )
-                                        }
-                                    }
+                                    RunModel(
+                                        coroutineScope,
+                                        recognizedText,
+                                        navController,
+                                        { isLoading = it },
+                                        { customDateText = it },
+                                        { selectedEmotion = it }
+                                    )
                                 } else {
                                     navController.navigate(
                                         "inputtextscreen/${
@@ -1043,3 +1020,45 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     }
 }
 
+fun RunModel(
+    coroutineScope: CoroutineScope,
+    recognizedText: String,
+    navController: NavController,
+    onLoading: (Boolean) -> Unit,
+    onCustomDateResult: (String) -> Unit,
+    onEmotionResult: (String) -> Unit
+) {
+    coroutineScope.launch {
+        onLoading(true)
+
+        val customDateDeferred = async {
+            try {
+                val response = RetrofitClient.apiService.generateText(TextRequest(recognizedText))
+                response.generated_text
+            } catch (e: Exception) {
+                "오류 발생: ${e.message}"
+            }
+        }
+
+        val emotionDeferred = async {
+            try {
+                val response = RetrofitInstance2.api.analyzeText(EmotionRequest(recognizedText))
+                response.emotion
+            } catch (e: Exception) {
+                "오류 발생: ${e.message}"
+            }
+        }
+
+        val customDate = customDateDeferred.await()
+        val selectedEmotion = emotionDeferred.await()
+
+        onCustomDateResult(customDate)
+        onEmotionResult(selectedEmotion)
+
+        onLoading(false)
+
+        navController.navigate(
+            "inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDate)}/${Uri.encode(selectedEmotion)}"
+        )
+    }
+}
