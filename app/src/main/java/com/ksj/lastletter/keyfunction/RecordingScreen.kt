@@ -989,9 +989,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             Log.e("RecordingScreen", "Error processing text: ${e.message}")
                                             // 에러 발생 시 기본 데이터로 전달
                                             withContext(Dispatchers.Main) {
-                                                showSaveDialog = false
                                                 val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
-                                                navController.navigate("inputtextscreen?content=${encodedContent}")
+                                                // 로그 추가 (로그 레벨을 ERROR로 높여 확실히 확인)
+                                                Log.e("RecordingScreen", "전달할 텍스트: '$recognizedText', 인코딩: '$encodedContent'")
+                                                showSaveDialog = false  // 한 번만 호출
+                                                // 전체 URL 로깅 추가
+                                                val url = "inputtextscreen?content=${encodedContent}"
+                                                Log.e("RecordingScreen", "네비게이션 URL: $url")
+                                                navController.navigate(url)
                                             }
                                         }
                                     }

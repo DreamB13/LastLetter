@@ -112,8 +112,12 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-// 편지 데이터를 위한 상태 변수
-            var letterData by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+// 편지 데이터 구조 변경 - 문서 ID를 포함하도록
+            var letterData by remember {
+                mutableStateOf<List<Triple<String, String, String>>>(
+                    emptyList()
+                )
+            }
 
 // Firebase에서 데이터 불러오기
             LaunchedEffect(contactId) {
@@ -136,11 +140,12 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                 lettersRef.get().await()
                             }
 
-                            val fetchedLetters = mutableListOf<Pair<String, String>>()
+                            val fetchedLetters = mutableListOf<Triple<String, String, String>>()
                             for (doc in result) {
                                 val date = doc.getString("date") ?: ""
                                 val title = doc.getString("title") ?: ""
-                                fetchedLetters.add(Pair(date, title))
+                                val docId = doc.id
+                                fetchedLetters.add(Triple(date, title, docId))
                             }
 
                             letterData = fetchedLetters
@@ -151,7 +156,7 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 }
             }
 
-// 편지 목록 표시 (기존 코드 유지)
+// 편지 목록 표시 부분 수정
             if (letterData.isEmpty()) {
                 Text(
                     text = "아직 작성된 편지가 없습니다.",
@@ -159,8 +164,14 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     color = Color.Gray
                 )
             } else {
-                letterData.forEach { (date, title) ->
-                    ContextInfoCard(date, title)
+                letterData.forEach { (date, title, docId) ->
+                    // 카드에 클릭 기능 추가
+                    Box(modifier = Modifier.clickable {
+                        // InputText 화면으로 이동
+                        navController.navigate("inputtextscreen?letterId=${docId}&contactId=${contactId}")
+                    }) {
+                        ContextInfoCard(date, title)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }

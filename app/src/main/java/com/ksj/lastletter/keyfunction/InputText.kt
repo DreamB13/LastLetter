@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +52,10 @@ import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.FastAPI.TextRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 @Composable
 fun InputTextScreen(navController: NavController) {
@@ -60,41 +64,96 @@ fun InputTextScreen(navController: NavController) {
     val arguments = backStackEntry?.arguments
 
     var titleText by remember {
-        val encodedTitle = arguments?.getString("title") ?: ""
-        val decodedTitle = try {
-            java.net.URLDecoder.decode(encodedTitle, "UTF-8")
-        } catch (e: Exception) {
-            encodedTitle
-        }
-        mutableStateOf(decodedTitle)
+        mutableStateOf(
+            try {
+                java.net.URLDecoder.decode(arguments?.getString("title") ?: "", "UTF-8")
+            } catch (e: Exception) {
+                arguments?.getString("title") ?: ""
+            }
+        )
     }
 
     var letterText by remember {
-        val encodedContent = arguments?.getString("content") ?: ""
-        val decodedContent = try {
-            java.net.URLDecoder.decode(encodedContent, "UTF-8")
-        } catch (e: Exception) {
-            encodedContent
-        }
-        mutableStateOf(decodedContent)
+        mutableStateOf(
+            try {
+                java.net.URLDecoder.decode(arguments?.getString("content") ?: "", "UTF-8")
+            } catch (e: Exception) {
+                arguments?.getString("content") ?: ""
+            }
+        )
     }
 
     var selectedEmotion by remember {
-        val encodedEmotion = arguments?.getString("emotion") ?: "기쁨"
-        val decodedEmotion = try {
-            java.net.URLDecoder.decode(encodedEmotion, "UTF-8")
-        } catch (e: Exception) {
-            encodedEmotion
-        }
-        mutableStateOf(decodedEmotion)
+        mutableStateOf(
+            try {
+                java.net.URLDecoder.decode(arguments?.getString("emotion") ?: "기쁨", "UTF-8")
+            } catch (e: Exception) {
+                arguments?.getString("emotion") ?: "기쁨"
+            }
+        )
     }
     var maxTextLength by remember { mutableIntStateOf(500) }
 // 날짜 파라미터 (없으면 현재 날짜)
     val receivedDate = arguments?.getString("date")
-    val currentDate = java.text.SimpleDateFormat(
-        "MM월 dd일",
-        java.util.Locale.getDefault()
-    ).format(java.util.Date())
+    var currentDate by remember {
+        mutableStateOf(
+            java.text.SimpleDateFormat("MM월 dd일", java.util.Locale.getDefault())
+                .format(java.util.Date())
+        )
+    }
+
+    // 편지 ID 및 연락처 ID 파라미터 추출
+    val letterId = arguments?.getString("letterId")
+    val contactId = arguments?.getString("contactId") ?:
+    navController.previousBackStackEntry?.arguments?.getString("contactId") ?: ""
+
+    // 편지 ID가 있으면 저장된 편지 로드
+    LaunchedEffect(letterId) {
+        if (letterId != null && letterId.isNotEmpty()) {
+            try {
+                val db = FirebaseFirestore.getInstance()
+                val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                if (userId != null) {
+                    val letterDoc = withContext(Dispatchers.IO) {
+                        db.collection("users").document(userId)
+                            .collection("Yours").document(contactId)
+                            .collection("letters").document(letterId)
+                            .get()
+                            .await()
+                    }
+
+                    if (letterDoc.exists()) {
+                        titleText = letterDoc.getString("title") ?: ""
+                        letterText = letterDoc.getString("content") ?: ""
+                        selectedEmotion = letterDoc.getString("emotion") ?: "기쁨"
+                        currentDate = letterDoc.getString("date") ?: currentDate
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("InputTextScreen", "편지 로드 실패: ${e.message}")
+            }
+        } else {
+            // RecordingScreen에서 전달된 URL 파라미터 처리
+            titleText = try {
+                java.net.URLDecoder.decode(arguments?.getString("title") ?: "", "UTF-8")
+            } catch (e: Exception) {
+                arguments?.getString("title") ?: ""
+            }
+
+            letterText = try {
+                java.net.URLDecoder.decode(arguments?.getString("content") ?: "", "UTF-8")
+            } catch (e: Exception) {
+                arguments?.getString("content") ?: ""
+            }
+
+            selectedEmotion = try {
+                java.net.URLDecoder.decode(arguments?.getString("emotion") ?: "기쁨", "UTF-8")
+            } catch (e: Exception) {
+                arguments?.getString("emotion") ?: "기쁨"
+            }
+        }
+    }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
@@ -234,22 +293,32 @@ fun InputTextScreen(navController: NavController) {
                             )
 
                             // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                            val contactId = navController.previousBackStackEntry
-                                ?.arguments?.getString("contactId") ?: ""
+                            val contactId = arguments?.getString("contactId") ?:
+                            navController.previousBackStackEntry?.arguments?.getString("contactId") ?: ""
 
                             db.collection("users").document(userId)
                                 .collection("Yours").document(contactId)
                                 .collection("letters").add(letterData)
+                                // 저장 버튼의 onClick 부분만 수정
                                 .addOnSuccessListener {
                                     Log.d("InputTextScreen", "Letter saved successfully")
-                                    // 저장 성공 시 YourContextScreen으로 이동
-                                    navController.navigate("yourscontextscreen/${contactId}") {
-                                        // 스택에서 현재 화면 제거
-                                        popUpTo("yourscontextscreen/${contactId}") {
-                                            inclusive = false
+
+                                    // 저장 후 YoursContextScreen으로 직접 이동하도록 수정
+                                    try {
+                                        // contactId를 사용하여 YoursContextScreen으로 이동
+                                        navController.navigate("yoursContext/${contactId}") {
+                                            // 불필요한 화면 스택 제거
+                                            popUpTo("yoursContext/${contactId}") {
+                                                inclusive = false
+                                            }
                                         }
+                                    } catch (e: Exception) {
+                                        Log.e("InputTextScreen", "Navigation error: ${e.message}")
+                                        // 오류 발생 시 대체 네비게이션
+                                        navController.popBackStack()
                                     }
                                 }
+
                                 .addOnFailureListener { e ->
                                     Log.e("InputTextScreen", "Error saving letter", e)
                                     // 에러 처리
