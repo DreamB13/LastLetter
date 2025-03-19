@@ -1,5 +1,6 @@
 package com.ksj.lastletter.keyfunction
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
@@ -52,10 +55,46 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun InputTextScreen(navController: NavController) {
-    var titleText by remember { mutableStateOf("") }
-    var letterText by remember { mutableStateOf("") }
+    // 네비게이션에서 전달된 파라미터 추출
+    val backStackEntry = navController.currentBackStackEntry
+    val arguments = backStackEntry?.arguments
+
+    var titleText by remember {
+        val encodedTitle = arguments?.getString("title") ?: ""
+        val decodedTitle = try {
+            java.net.URLDecoder.decode(encodedTitle, "UTF-8")
+        } catch (e: Exception) {
+            encodedTitle
+        }
+        mutableStateOf(decodedTitle)
+    }
+
+    var letterText by remember {
+        val encodedContent = arguments?.getString("content") ?: ""
+        val decodedContent = try {
+            java.net.URLDecoder.decode(encodedContent, "UTF-8")
+        } catch (e: Exception) {
+            encodedContent
+        }
+        mutableStateOf(decodedContent)
+    }
+
+    var selectedEmotion by remember {
+        val encodedEmotion = arguments?.getString("emotion") ?: "기쁨"
+        val decodedEmotion = try {
+            java.net.URLDecoder.decode(encodedEmotion, "UTF-8")
+        } catch (e: Exception) {
+            encodedEmotion
+        }
+        mutableStateOf(decodedEmotion)
+    }
     var maxTextLength by remember { mutableIntStateOf(500) }
-    var selectedEmotion by remember { mutableStateOf("기쁨") }
+// 날짜 파라미터 (없으면 현재 날짜)
+    val receivedDate = arguments?.getString("date")
+    val currentDate = java.text.SimpleDateFormat(
+        "MM월 dd일",
+        java.util.Locale.getDefault()
+    ).format(java.util.Date())
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
@@ -127,17 +166,19 @@ fun InputTextScreen(navController: NavController) {
                     .weight(0.6f)
             ) {
                 Text(
-                    "작성일 : 날짜 표시하는 함수",
+                    "작성일 : $currentDate",
                     color = Color(0xffAFADAD),
                     modifier = Modifier
                         .padding(0.dp)
                         .align(Alignment.CenterVertically)
                 )
-                Text("글자 수: ${letterText.length}/${maxTextLength}",
+                Text(
+                    "글자 수: ${letterText.length}/${maxTextLength}",
                     color = Color(0xffAFADAD),
                     modifier = Modifier
                         .padding(0.dp)
-                        .align(Alignment.CenterVertically))
+                        .align(Alignment.CenterVertically)
+                )
             }
             TextField(
                 value = letterText,
@@ -177,7 +218,48 @@ fun InputTextScreen(navController: NavController) {
                     )
                 }
                 Button(
-                    onClick = {/*저장하면서 YourContextScreen으로 스택 날리고 이동시켜야함.*/ },
+                    onClick = {
+                        // Firebase에 저장
+                        val db = FirebaseFirestore.getInstance()
+                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                        if (userId != null) {
+                            // 편지 데이터 생성
+                            val letterData = hashMapOf(
+                                "date" to currentDate,
+                                "title" to titleText,
+                                "content" to letterText,
+                                "emotion" to selectedEmotion,
+                                "timestamp" to com.google.firebase.Timestamp.now()
+                            )
+
+                            // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
+                            val contactId = navController.previousBackStackEntry
+                                ?.arguments?.getString("contactId") ?: ""
+
+                            db.collection("users").document(userId)
+                                .collection("Yours").document(contactId)
+                                .collection("letters").add(letterData)
+                                .addOnSuccessListener {
+                                    Log.d("InputTextScreen", "Letter saved successfully")
+                                    // 저장 성공 시 YourContextScreen으로 이동
+                                    navController.navigate("yourscontextscreen/${contactId}") {
+                                        // 스택에서 현재 화면 제거
+                                        popUpTo("yourscontextscreen/${contactId}") {
+                                            inclusive = false
+                                        }
+                                    }
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("InputTextScreen", "Error saving letter", e)
+                                    // 에러 처리
+                                    Toast.makeText(context, "저장 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
+                            // 로그인되지 않은 경우
+                            Toast.makeText(context, "로그인이 필요합니다", Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                 ) {
@@ -190,7 +272,8 @@ fun InputTextScreen(navController: NavController) {
                     onClick = {
                         coroutineScope.launch {
                             try {
-                                val response = RetrofitClient.apiService.generateText(TextRequest(letterText))
+                                val response =
+                                    RetrofitClient.apiService.generateText(TextRequest(letterText))
                                 titleText = response.generated_text  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 titleText = "오류 발생: ${e.message}"
@@ -209,7 +292,8 @@ fun InputTextScreen(navController: NavController) {
                     onClick = {
                         coroutineScope.launch {
                             try {
-                                val response = RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
+                                val response =
+                                    RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
                                 selectedEmotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 selectedEmotion = "오류 발생: ${e.message}"
