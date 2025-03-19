@@ -1,5 +1,6 @@
 package com.ksj.lastletter.keyfunction
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -169,7 +170,7 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     // 카드에 클릭 기능 추가
                     Box(modifier = Modifier.clickable {
                         // InputText 화면으로 이동
-                        navController.navigate("inputtextscreen?letterId=${docId}&contactId=${contactId}")
+                        navController.navigate("inputtextscreen/${Uri.encode(docId)}/${Uri.encode(contactId)}/${Uri.encode("fromfirebase")}")
                     }) {
                         ContextInfoCard(date, title)
                     }
