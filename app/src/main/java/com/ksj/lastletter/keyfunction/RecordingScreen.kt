@@ -62,8 +62,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.BuildConfig
 import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
