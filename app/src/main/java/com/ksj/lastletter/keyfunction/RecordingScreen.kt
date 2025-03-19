@@ -975,11 +975,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     confirmButton = {
                         Button(
                             onClick = {
-                                // 현재 날짜 가져오기
-                                val currentDate = java.text.SimpleDateFormat(
-                                    "MM월 dd일",
-                                    java.util.Locale.getDefault()
-                                ).format(java.util.Date())
 
                                 if (selectedOption == 0) {
                                     //자동저장 선택

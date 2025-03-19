@@ -38,6 +38,10 @@ private val sampleRate = 16000 // 16kHz - STT에 적합한 샘플레이트
 private val channelConfig = AudioFormat.CHANNEL_IN_MONO
 private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
+// 오디오 샘플 데이터를 저장할 버퍼 추가
+private val waveformBuffer = mutableListOf<Float>()
+private val waveformLock = Any() // 스레드 안전을 위한 락 객체
+
 fun startRecording(
     context: Context,
     outputFile: String,
@@ -99,6 +103,11 @@ fun startRecording(
                     if (read > 0) {
                         outputStream.write(data, 0, read)
                         totalBytesRead += read
+// 오디오 데이터에서 파형 데이터 추출 및 버퍼 업데이트
+                        synchronized(waveformLock) {
+                            waveformBuffer.clear()
+                            waveformBuffer.addAll(byteToAmplitude(data, read))
+                        }
                     }
                 }
                 audioRecord?.stop()
@@ -209,6 +218,40 @@ fun startTimer(
     }
 }
 
+// 오디오 샘플을 파형 데이터로 변환하는 함수
+private fun byteToAmplitude(audioData: ByteArray, bufferSize: Int): List<Float> {
+    val result = mutableListOf<Float>()
+
+    // 데이터 압축 - 버퍼 크기에서 50개의 샘플 포인트 추출
+    val segmentSize = bufferSize / 100
+
+    for (i in 0 until 50) {
+        var sum = 0f
+        var count = 0
+
+        // 각 세그먼트 내의 샘플 평균 계산
+        val startIdx = i * segmentSize
+        val endIdx = minOf((i + 1) * segmentSize, bufferSize)
+
+        for (j in startIdx until endIdx step 2) {
+            if (j + 1 < bufferSize) {
+                // 16비트 샘플 데이터 (2바이트) 변환
+                val sample = (audioData[j].toInt() and 0xFF) or ((audioData[j + 1].toInt() and 0xFF) shl 8)
+                // 진폭 정규화 (0.1~0.9 범위로)
+                val amplitude = 0.1f + (Math.abs(sample) / 32768f) * 0.8f
+                sum += amplitude
+                count++
+            }
+        }
+
+        // 평균 진폭 계산
+        val avgAmplitude = if (count > 0) sum / count else 0.1f
+        result.add(avgAmplitude)
+    }
+
+    return result
+}
+
 fun animateWaveform(
     coroutineScope: CoroutineScope,
     onWaveformUpdate: (List<Float>) -> Unit
@@ -216,7 +259,17 @@ fun animateWaveform(
     return coroutineScope.launch {
         while (true) {
             delay(150)
-            val newData = List(50) { Random.nextFloat() * 0.8f + 0.1f }
+
+            // 실제 오디오 데이터 사용
+            val newData = synchronized(waveformLock) {
+                if (waveformBuffer.isEmpty()) {
+                    // 버퍼가 비어있으면 기본 파형 생성 (기존 기능 유지)
+                    List(50) { Random.nextFloat() * 0.8f + 0.1f }
+                } else {
+                    waveformBuffer.toList()
+                }
+            }
+
             onWaveformUpdate(newData)
         }
     }
