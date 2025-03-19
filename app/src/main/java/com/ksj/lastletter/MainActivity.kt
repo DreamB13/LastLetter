@@ -92,10 +92,7 @@ class MainActivity : ComponentActivity() {
                             })
                         ) { backStackEntry ->
                             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                            YoursContextScreen(
-                                navController = navController,
-                                contactId = contactId
-                            )
+                            YoursContextScreen(contactId= contactId, navController = navController)
                         }
                         composable(
                             route = "recording/{contactId}/{contactName}",
@@ -104,12 +101,8 @@ class MainActivity : ComponentActivity() {
                                 navArgument("contactName") { type = NavType.StringType }
                             )
                         ) { backStackEntry ->
-                            val contactName =
-                                backStackEntry.arguments?.getString("contactName") ?: ""
-                            RecordingScreen(
-                                navController = navController,
-                                contactName = contactName
-                            )
+                            val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
+                            RecordingScreen(navController, contactName)
                         }
                         composable("settings") {
                             SettingsScreen(navController = navController)
@@ -138,13 +131,15 @@ class MainActivity : ComponentActivity() {
                         composable("phoneTerm") {
                             PhoneTermScreen(navController = navController)
                         }
+                        composable("inputtextscreen") {
+                            InputTextScreen(navController)
+                        }
                     }
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {

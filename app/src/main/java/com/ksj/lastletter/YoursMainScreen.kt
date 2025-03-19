@@ -106,6 +106,12 @@ fun YoursMainScreen(navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
+            InfoCard(
+                "로그인 안돼서 하나 만듦",
+                modifier = Modifier.clickable {
+                    navController.navigate("recording/1/1")
+                }
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
