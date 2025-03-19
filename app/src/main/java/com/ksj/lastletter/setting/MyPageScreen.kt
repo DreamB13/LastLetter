@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,16 +42,38 @@ import androidx.navigation.NavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ksj.lastletter.AppViewModel
 import com.ksj.lastletter.firebase.DocumentContact
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPageScreen(navController: NavController) {
-    // AppViewModel을 내부에서 불러와서 캐시된 연락처 목록을 사용합니다.
+    // AppViewModel 불러오기
     val appViewModel: AppViewModel = viewModel()
     val contacts: List<DocumentContact> = appViewModel.contacts.value
 
-    var currentAttendance by remember { mutableStateOf(4) }
+    // 출석체크 로직 관련 상태
+    // 1) 현재까지 출석한 횟수(0부터 시작)
+    var currentAttendance by remember { mutableStateOf(0) }
     val totalAttendance = 10
+
+    // 2) 출석 완료 여부 (버튼을 비활성화할 때 사용)
+    var isAttendanceComplete by remember { mutableStateOf(false) }
+
+    // 3) 마지막으로 출석한 날짜
+    var lastAttendanceDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    // 화면이 다시 그려질 때마다, “오늘 날짜가 바뀌었고 오전 8시 이후라면” 출석을 초기화
+    val now = LocalDateTime.now()
+    LaunchedEffect(key1 = now) {
+        // 날짜가 바뀌었고, 현재 시간이 오전 8시 이상이라면
+        if (lastAttendanceDate != now.toLocalDate() && now.hour >= 8) {
+            isAttendanceComplete = false
+            lastAttendanceDate = now.toLocalDate()
+        }
+    }
+
+    // 배경색
     val backgroundColor = Color(0xFFFFF5E9)
 
     Scaffold(
@@ -92,6 +115,7 @@ fun MyPageScreen(navController: NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.Top
             ) {
+                // 출석 체크 영역
                 Text(
                     text = "출석 체크",
                     style = MaterialTheme.typography.bodyMedium,
@@ -99,14 +123,18 @@ fun MyPageScreen(navController: NavController) {
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 현재 출석 / 총 출석
                     Text(
                         text = "$currentAttendance/$totalAttendance",
                         color = Color.Gray
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+
+                    // 출석 진행도
                     val progress = currentAttendance.toFloat() / totalAttendance
                     LinearProgressIndicator(
                         progress = progress,
@@ -117,19 +145,28 @@ fun MyPageScreen(navController: NavController) {
                         trackColor = Color(0xFFECECEC)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+
+                    // 출석 버튼
                     Button(
                         onClick = {
-                            if (currentAttendance < totalAttendance) {
+                            if (!isAttendanceComplete && currentAttendance < totalAttendance) {
                                 currentAttendance++
+                                isAttendanceComplete = true
+                                lastAttendanceDate = now.toLocalDate()
                             }
-                        }
+                        },
+                        enabled = !isAttendanceComplete
                     ) {
-                        Text("출석하기")
+                        Text(
+                            text = if (isAttendanceComplete) "출석완료" else "출석하기"
+                        )
                     }
                 }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider(color = Color.LightGray, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
+
                 // 기존 상품 영역 UI
                 ItemRow(
                     title = "편지 보낼 사람 추가",
@@ -148,6 +185,8 @@ fun MyPageScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider(color = Color.LightGray, thickness = 1.dp)
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // 메뉴 아이템들
                 MenuItem("자주 묻는 질문") { /* 클릭 처리 */ }
                 Spacer(modifier = Modifier.height(8.dp))
                 MenuItem("문의하기") { /* 클릭 처리 */ }
@@ -155,7 +194,8 @@ fun MyPageScreen(navController: NavController) {
                 MenuItem("질문 제안하기") { /* 클릭 처리 */ }
                 Spacer(modifier = Modifier.height(8.dp))
                 MenuItem("버전 정보") { /* 클릭 처리 */ }
-                // (옵션) 캐시된 연락처 목록이 있다면 아래에 출력할 수 있습니다.
+
+                // 캐시된 연락처 목록 예시
                 if (contacts.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(text = "연락처 목록", fontSize = 18.sp, color = Color.Black)
