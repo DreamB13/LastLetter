@@ -94,7 +94,7 @@ fun YoursMainScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = {navController.navigate("recording/1/1")}) {
+            Button(onClick = { navController.navigate("recording/1/1") }) {
                 Text("바로가기")
             }
             contacts.forEach { documentContact ->

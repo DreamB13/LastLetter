@@ -942,7 +942,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         selectedColor = Color(0xFFFFDCA8)
                                     )
                                 )
-
                                 // 선택되었을 때는 편집 가능한 TextField로 변경
                                 if (selectedOption == 1) {
                                     TextField(

@@ -61,7 +61,6 @@ class MainActivity : ComponentActivity() {
                 // 현재 라우트를 관찰
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-
                 // "login" 화면일 때는 bottomBar를 숨긴다
                 val showBottomBar = currentRoute != "login"
 

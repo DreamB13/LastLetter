@@ -273,6 +273,7 @@ fun ContextInfoCard(date: String, text: String) {
             color = Color.Black,
             modifier = Modifier.padding(start = 16.dp)
         )
+
         Text(
             text = text,
             color = Color.Black,

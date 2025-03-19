@@ -330,7 +330,7 @@ fun EmotionSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val emotions = listOf("기쁨", "놀라움", "사랑", "슬픔", "분노", "중립","해당 없음")
+    val emotions = listOf("기쁨", "놀라움", "사랑", "슬픔", "분노", "중립", "해당 없음")
     val emotionIcons = mapOf(
         "기쁨" to "😆",
         "놀라움" to "😲",
