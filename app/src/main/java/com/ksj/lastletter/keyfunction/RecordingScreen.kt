@@ -7,6 +7,7 @@ import android.media.AudioRecord
 import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -96,7 +97,11 @@ enum class RecordingState {
 fun RecordingScreen(navController: NavController, contactName: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    var customDateText by remember { mutableStateOf("") }
+    var selectedEmotion by remember { mutableStateOf("") }
     var showExitDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+
 
     // 상태 관리 변수들
     var recordingState by remember { mutableStateOf(RecordingState.NOT_STARTED) }
@@ -114,6 +119,12 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     // 코루틴 작업 관리
     var timerJob by remember { mutableStateOf<Job?>(null) }
     var waveformJob by remember { mutableStateOf<Job?>(null) }
+
+    //현재 날짜
+    val currentDate = java.text.SimpleDateFormat(
+        "MM월 dd일",
+        java.util.Locale.getDefault()
+    ).format(java.util.Date())
 
     // Google STT API Key
     val googleAPIKey = try {
@@ -518,7 +529,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Button(
-                        onClick = { navController.navigate("inputtextscreen") },
+                        onClick = {
+                            navController.navigate(
+                                "inputtextscreen/${Uri.encode(recognizedText)}/${
+                                    Uri.encode(
+                                        customDateText
+                                    )
+                                }/${Uri.encode(selectedEmotion)}"
+                            )
+                        },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                         modifier = Modifier
@@ -956,56 +975,56 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     confirmButton = {
                         Button(
                             onClick = {
+                                // 현재 날짜 가져오기
+                                val currentDate = java.text.SimpleDateFormat(
+                                    "MM월 dd일",
+                                    java.util.Locale.getDefault()
+                                ).format(java.util.Date())
+
                                 if (selectedOption == 0) {
-                                    // 자동 저장 옵션 선택 시 - 제목 추천 및 감정 분석 API 호출
+                                    //자동저장 선택
                                     coroutineScope.launch {
+                                        isLoading = true
                                         try {
-                                            // 제목 추천 API 호출
-                                            val titleResponse = RetrofitClient.apiService.generateText(
-                                                TextRequest(recognizedText)
-                                            )
-                                            val recommendedTitle = titleResponse.generated_text
-
-                                            // 감정 분석 API 호출
-                                            val emotionResponse = RetrofitInstance2.api.analyzeText(
-                                                EmotionRequest(recognizedText)
-                                            )
-                                            val analyzedEmotion = emotionResponse.emotion
-
-                                            // URL 인코딩 적용
-                                            val encodedTitle = java.net.URLEncoder.encode(recommendedTitle, "UTF-8")
-                                            val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
-                                            val encodedEmotion = java.net.URLEncoder.encode(analyzedEmotion, "UTF-8")
-
-                                            // 로그 출력으로 값 확인
-                                            Log.d("RecordingScreen", "제목: $recommendedTitle, 감정: $analyzedEmotion")
-
-                                            // UI 스레드에서 네비게이션 실행
-                                            withContext(Dispatchers.Main) {
-                                                showSaveDialog = false
-                                                navController.navigate("inputtextscreen?title=${encodedTitle}&content=${encodedContent}&emotion=${encodedEmotion}")
-                                            }
+                                            val response =
+                                                RetrofitClient.apiService.generateText(TextRequest(recognizedText))
+                                            customDateText = response.generated_text  // 서버 응답을 표시
                                         } catch (e: Exception) {
-                                            Log.e("RecordingScreen", "Error processing text: ${e.message}")
-                                            // 에러 발생 시 기본 데이터로 전달
-                                            withContext(Dispatchers.Main) {
-                                                val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
-                                                // 로그 추가 (로그 레벨을 ERROR로 높여 확실히 확인)
-                                                Log.e("RecordingScreen", "전달할 텍스트: '$recognizedText', 인코딩: '$encodedContent'")
-                                                showSaveDialog = false  // 한 번만 호출
-                                                // 전체 URL 로깅 추가
-                                                val url = "inputtextscreen?content=${encodedContent}"
-                                                Log.e("RecordingScreen", "네비게이션 URL: $url")
-                                                navController.navigate(url)
-                                            }
+                                            customDateText = "오류 발생: ${e.message}"
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                        isLoading = true
+                                        try {
+                                            val response =
+                                                RetrofitInstance2.api.analyzeText(
+                                                    EmotionRequest(
+                                                        recognizedText
+                                                    )
+                                                )
+                                            selectedEmotion = response.emotion  // 서버 응답을 표시
+                                        } catch (e: Exception) {
+                                            selectedEmotion = "오류 발생: ${e.message}"
+                                        } finally {
+                                            isLoading = false
+                                            navController.navigate(
+                                                "inputtextscreen/${
+                                                    Uri.encode(
+                                                        recognizedText
+                                                    )
+                                                }/${Uri.encode(customDateText)}/${Uri.encode(selectedEmotion)}"
+                                            )
                                         }
                                     }
                                 } else {
-                                    // 두 번째 옵션의 경우 사용자가 입력한 제목 사용
-                                    val encodedTitle = java.net.URLEncoder.encode(customDateText, "UTF-8")
-                                    val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
+                                    navController.navigate(
+                                        "inputtextscreen/${
+                                            Uri.encode(
+                                                recognizedText
+                                            )
+                                        }/${Uri.encode(customDateText)}/${Uri.encode(selectedEmotion)}"
+                                    )
                                     showSaveDialog = false
-                                    navController.navigate("inputtextscreen?title=${encodedTitle}&content=${encodedContent}")
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -1015,8 +1034,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         ) {
                             Text("저장")
                         }
-                    }
-                    ,
+                    },
                     dismissButton = {
                         Button(
                             onClick = { showSaveDialog = false },

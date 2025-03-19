@@ -18,8 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -29,7 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,116 +53,33 @@ import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.FastAPI.TextRequest
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
 
 @Composable
-fun InputTextScreen(navController: NavController) {
-    // 네비게이션에서 전달된 파라미터 추출
+fun InputTextScreen(
+    navController: NavController,
+    recognizedText: String,
+    customDateText: String,
+    selectedEmotion: String
+) {
+    var titleText by remember { mutableStateOf(customDateText) }
+    var maxTextLength by remember { mutableIntStateOf(500) }
+    var letterText by remember { mutableStateOf(recognizedText) }
+    var isLoading by remember { mutableStateOf(false) }
+    var emotion by remember { mutableStateOf(selectedEmotion) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    if (letterText.length == maxTextLength) {
+        Toast.makeText(context, "글자 수를 초과하셨습니다.", Toast.LENGTH_SHORT).show()
+    }
     val backStackEntry = navController.currentBackStackEntry
     val arguments = backStackEntry?.arguments
-
-    var titleText by remember {
-        mutableStateOf(
-            try {
-                java.net.URLDecoder.decode(arguments?.getString("title") ?: "", "UTF-8")
-            } catch (e: Exception) {
-                arguments?.getString("title") ?: ""
-            }
-        )
-    }
-
-    var letterText by remember {
-        mutableStateOf(
-            try {
-                java.net.URLDecoder.decode(arguments?.getString("content") ?: "", "UTF-8")
-            } catch (e: Exception) {
-                arguments?.getString("content") ?: ""
-            }
-        )
-    }
-
-    var selectedEmotion by remember {
-        mutableStateOf(
-            try {
-                java.net.URLDecoder.decode(arguments?.getString("emotion") ?: "기쁨", "UTF-8")
-            } catch (e: Exception) {
-                arguments?.getString("emotion") ?: "기쁨"
-            }
-        )
-    }
-    var maxTextLength by remember { mutableIntStateOf(500) }
-// 날짜 파라미터 (없으면 현재 날짜)
-    val receivedDate = arguments?.getString("date")
     var currentDate by remember {
         mutableStateOf(
             java.text.SimpleDateFormat("MM월 dd일", java.util.Locale.getDefault())
                 .format(java.util.Date())
         )
     }
-
-    // 편지 ID 및 연락처 ID 파라미터 추출
-    val letterId = arguments?.getString("letterId")
-    val contactId = arguments?.getString("contactId") ?:
-    navController.previousBackStackEntry?.arguments?.getString("contactId") ?: ""
-
-    // 편지 ID가 있으면 저장된 편지 로드
-    LaunchedEffect(letterId) {
-        if (letterId != null && letterId.isNotEmpty()) {
-            try {
-                val db = FirebaseFirestore.getInstance()
-                val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-                if (userId != null) {
-                    val letterDoc = withContext(Dispatchers.IO) {
-                        db.collection("users").document(userId)
-                            .collection("Yours").document(contactId)
-                            .collection("letters").document(letterId)
-                            .get()
-                            .await()
-                    }
-
-                    if (letterDoc.exists()) {
-                        titleText = letterDoc.getString("title") ?: ""
-                        letterText = letterDoc.getString("content") ?: ""
-                        selectedEmotion = letterDoc.getString("emotion") ?: "기쁨"
-                        currentDate = letterDoc.getString("date") ?: currentDate
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("InputTextScreen", "편지 로드 실패: ${e.message}")
-            }
-        } else {
-            // RecordingScreen에서 전달된 URL 파라미터 처리
-            titleText = try {
-                java.net.URLDecoder.decode(arguments?.getString("title") ?: "", "UTF-8")
-            } catch (e: Exception) {
-                arguments?.getString("title") ?: ""
-            }
-
-            letterText = try {
-                java.net.URLDecoder.decode(arguments?.getString("content") ?: "", "UTF-8")
-            } catch (e: Exception) {
-                arguments?.getString("content") ?: ""
-            }
-
-            selectedEmotion = try {
-                java.net.URLDecoder.decode(arguments?.getString("emotion") ?: "기쁨", "UTF-8")
-            } catch (e: Exception) {
-                arguments?.getString("emotion") ?: "기쁨"
-            }
-        }
-    }
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    if (letterText.length == maxTextLength) {
-        Toast.makeText(context, "글자 수를 초과하셨습니다.", Toast.LENGTH_SHORT).show()
-    }
-
-
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
@@ -212,8 +130,8 @@ fun InputTextScreen(navController: NavController) {
             ) {
                 Spacer(modifier = Modifier.weight(4f))
                 EmotionSelector(
-                    selectedEmotion = selectedEmotion,
-                    onEmotionSelected = { newEmotion -> selectedEmotion = newEmotion },
+                    selectedEmotion = emotion,
+                    onEmotionSelected = { newEmotion -> emotion = newEmotion },
                     modifier = Modifier.weight(1.5f)
                 )
             }
@@ -262,7 +180,7 @@ fun InputTextScreen(navController: NavController) {
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(4f)
+                    .weight(5f)
             ) {
                 Button(
                     onClick = {/*광고 띄우면서 최대 글자수 1000으로 변경*/
@@ -288,18 +206,19 @@ fun InputTextScreen(navController: NavController) {
                                 "date" to currentDate,
                                 "title" to titleText,
                                 "content" to letterText,
-                                "emotion" to selectedEmotion,
+                                "emotion" to emotion,
                                 "timestamp" to com.google.firebase.Timestamp.now()
                             )
 
                             // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                            val contactId = arguments?.getString("contactId") ?:
-                            navController.previousBackStackEntry?.arguments?.getString("contactId") ?: ""
+                            val contactId = arguments?.getString("contactId")
+                                ?: navController.previousBackStackEntry?.arguments?.getString("contactId")
+                                ?: ""
 
                             db.collection("users").document(userId)
                                 .collection("Yours").document(contactId)
                                 .collection("letters").add(letterData)
-                                // 저장 버튼의 onClick 부분만 수정
+// 저장 버튼의 onClick 부분만 수정
                                 .addOnSuccessListener {
                                     Log.d("InputTextScreen", "Letter saved successfully")
 
@@ -322,7 +241,11 @@ fun InputTextScreen(navController: NavController) {
                                 .addOnFailureListener { e ->
                                     Log.e("InputTextScreen", "Error saving letter", e)
                                     // 에러 처리
-                                    Toast.makeText(context, "저장 실패: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "저장 실패: ${e.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                         } else {
                             // 로그인되지 않은 경우
@@ -340,12 +263,15 @@ fun InputTextScreen(navController: NavController) {
                 Button(
                     onClick = {
                         coroutineScope.launch {
+                            isLoading = true
                             try {
                                 val response =
                                     RetrofitClient.apiService.generateText(TextRequest(letterText))
                                 titleText = response.generated_text  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 titleText = "오류 발생: ${e.message}"
+                            } finally {
+                                isLoading = false
                             }
                         }
                     },
@@ -360,12 +286,15 @@ fun InputTextScreen(navController: NavController) {
                 Button(
                     onClick = {
                         coroutineScope.launch {
+                            isLoading = true
                             try {
                                 val response =
                                     RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
-                                selectedEmotion = response.emotion  // 서버 응답을 표시
+                                emotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
-                                selectedEmotion = "오류 발생: ${e.message}"
+                                emotion = "오류 발생: ${e.message}"
+                            } finally {
+                                isLoading = false
                             }
                         }
                     },
@@ -381,9 +310,17 @@ fun InputTextScreen(navController: NavController) {
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(5f)
+                    .weight(4f)
             )
         }
+    }
+    if (isLoading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("분석 중...") },
+            text = { CircularProgressIndicator() },
+            confirmButton = {}
+        )
     }
 }
 
@@ -448,10 +385,3 @@ fun EmotionSelector(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun InputTextScreenPreview() {
-    // NavController는 preview에서 바로 사용할 수 없으므로 임시로 NavController를 넣습니다.
-    val navController = rememberNavController() // NavController 생성
-    InputTextScreen(navController = navController) // Preview에서 InputTextScreen 호출
-}
