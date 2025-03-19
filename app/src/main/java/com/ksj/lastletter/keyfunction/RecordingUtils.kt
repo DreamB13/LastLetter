@@ -98,18 +98,22 @@ fun startRecording(
                 writeWavHeader(outputStream, 0) // 임시 데이터 크기로 헤더 작성
                 audioRecord?.startRecording()
                 var totalBytesRead = 0
+
                 while (isRecording) {
                     val read = audioRecord?.read(data, 0, bufferSize) ?: -1
                     if (read > 0) {
                         outputStream.write(data, 0, read)
                         totalBytesRead += read
-// 오디오 데이터에서 파형 데이터 추출 및 버퍼 업데이트
+
+                        // 오디오 데이터에서 파형 데이터 추출 및 버퍼 업데이트
                         synchronized(waveformLock) {
+                            val waveformData = byteToAmplitude(data, read)
                             waveformBuffer.clear()
-                            waveformBuffer.addAll(byteToAmplitude(data, read))
+                            waveformBuffer.addAll(waveformData)
                         }
                     }
                 }
+
                 audioRecord?.stop()
                 // 실제 데이터 크기로 WAV 헤더 업데이트
                 updateWavHeader(file, totalBytesRead)
@@ -226,7 +230,7 @@ private fun byteToAmplitude(audioData: ByteArray, bufferSize: Int): List<Float> 
     val segmentSize = bufferSize / 100
 
     for (i in 0 until 50) {
-        var sum = 0f
+        var sum = 0.0
         var count = 0
 
         // 각 세그먼트 내의 샘플 평균 계산
@@ -237,16 +241,18 @@ private fun byteToAmplitude(audioData: ByteArray, bufferSize: Int): List<Float> 
             if (j + 1 < bufferSize) {
                 // 16비트 샘플 데이터 (2바이트) 변환
                 val sample = (audioData[j].toInt() and 0xFF) or ((audioData[j + 1].toInt() and 0xFF) shl 8)
+                // 부호 있는 값으로 변환 (16비트)
+                val signedSample = if (sample > 32767) sample - 65536 else sample
                 // 진폭 정규화 (0.1~0.9 범위로)
-                val amplitude = 0.1f + (Math.abs(sample) / 32768f) * 0.8f
+                val amplitude = 0.1f + (Math.abs(signedSample) / 32768.0) * 0.8
                 sum += amplitude
                 count++
             }
         }
 
         // 평균 진폭 계산
-        val avgAmplitude = if (count > 0) sum / count else 0.1f
-        result.add(avgAmplitude)
+        val avgAmplitude = if (count > 0) sum / count else 0.1
+        result.add(avgAmplitude.toFloat())
     }
 
     return result
@@ -258,7 +264,7 @@ fun animateWaveform(
 ): Job {
     return coroutineScope.launch {
         while (true) {
-            delay(150)
+            delay(100)  // 업데이트 주기 빠르게 변경 (150ms → 100ms)
 
             // 실제 오디오 데이터 사용
             val newData = synchronized(waveformLock) {
@@ -360,20 +366,28 @@ fun AudioWaveform(waveformData: List<Float>, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val barWidth = width / waveformData.size
+        val barWidth = (width / 100)  // 더 많은 바를 표시하기 위해 조정
+        val gap = barWidth * 0.2f     // 바 사이 간격
         val centerY = height / 2
+
+        // 왼쪽 여백 계산 (중앙 정렬을 위해)
+        val totalBarsWidth = (barWidth + gap) * waveformData.size
+        val startX = (width - totalBarsWidth) / 2
 
         waveformData.forEachIndexed { index, amplitude ->
             val barHeight = height * amplitude
             val startY = centerY - barHeight / 2
+            val x = startX + index * (barWidth + gap)
 
+            // 바 그리기
             drawRect(
                 color = Color.Black,
-                topLeft = Offset(index * barWidth, startY),
-                size = Size(barWidth - 2, barHeight)
+                topLeft = Offset(x, startY),
+                size = Size(barWidth, barHeight)
             )
         }
 
+        // 재생 위치 표시선
         drawLine(
             color = Color.Red,
             start = Offset(width * 0.9f, 0f),
