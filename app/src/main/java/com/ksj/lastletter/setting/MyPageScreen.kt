@@ -57,6 +57,7 @@ fun MyPageScreen(navController: NavController) {
     var currentAttendance by remember { mutableStateOf(0) }
     val totalAttendance = 10
 
+
     // 2) 출석 완료 여부 (버튼을 비활성화할 때 사용)
     var isAttendanceComplete by remember { mutableStateOf(false) }
 
