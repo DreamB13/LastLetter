@@ -18,7 +18,7 @@ interface ApiService2 {
 
 // Retrofit 인스턴스 생성
 object RetrofitInstance2 {
-    private const val BASE_URL = "https://0e4e-35-187-228-242.ngrok-free.app/" // Colab에서 받은 ngrok 주소
+    private const val BASE_URL = "https://7586-34-124-177-187.ngrok-free.app/" // Colab에서 받은 ngrok 주소
 
     val api: ApiService2 by lazy {
         Retrofit.Builder()
