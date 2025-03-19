@@ -151,7 +151,8 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                 val date = doc.getString("date") ?: ""
                                 val title = doc.getString("title") ?: ""
                                 val docId = doc.id
-                                val emotion = doc.getString("emotion") ?: "중립" // emotion 정보 추가로 불러오기
+                                val emotion =
+                                    doc.getString("emotion") ?: "중립" // emotion 정보 추가로 불러오기
                                 fetchedLetters.add(LetterInfo(date, title, docId, emotion))
                             }
                             letterData = fetchedLetters
@@ -175,7 +176,13 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     // 카드에 클릭 기능 추가
                     Box(modifier = Modifier.clickable {
                         // InputText 화면으로 이동
-                        navController.navigate("inputtextscreen/${Uri.encode(letterInfo.docId)}/${Uri.encode(contactId)}/${Uri.encode("fromfirebase")}")
+                        navController.navigate(
+                            "inputtextscreen/${Uri.encode(letterInfo.docId)}/${
+                                Uri.encode(
+                                    contactId
+                                )
+                            }/${Uri.encode("fromfirebase")}"
+                        )
                     }) {
                         ContextInfoCard(letterInfo.date, letterInfo.title, letterInfo.emotion)
                     }
