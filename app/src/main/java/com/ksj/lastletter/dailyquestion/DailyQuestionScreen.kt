@@ -1,5 +1,6 @@
 package com.ksj.lastletter.dailyquestion
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,8 +32,11 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.ksj.lastletter.AppViewModel
+import com.ksj.lastletter.FastAPI.EmotionRequest
+import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.R
 import com.ksj.lastletter.firebase.DocumentContact
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 // 감정에 따른 배경색 매핑 함수 (필요에 따라 색상을 수정하세요)
@@ -57,6 +61,17 @@ fun DailyQuestionScreen(navController: NavController) {
     val uid = auth.currentUser?.uid
     val appViewModel: AppViewModel = viewModel()
     val contacts: List<DocumentContact> = appViewModel.contacts.value
+
+    val coroutineScope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+    if (isLoading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("분석 중...") },
+            text = { CircularProgressIndicator() },
+            confirmButton = {}
+        )
+    }
 
     // 오늘 날짜의 dayOfYear를 이용해 문서 ID를 정합니다 (예: "DailyQuestion_74")
     val today = LocalDate.now().dayOfYear
@@ -207,6 +222,31 @@ fun DailyQuestionScreen(navController: NavController) {
                 Button(
                     onClick = {
                         if (uid != null) {
+                            coroutineScope.launch {
+                                isLoading = true
+                                try {
+                                    val response =
+                                        RetrofitInstance2.api.analyzeText(
+                                            EmotionRequest(
+                                                answer.value
+                                            )
+                                        )
+                                    selectedEmotion = response.emotion  // 서버 응답을 표시
+                                } catch (e: Exception) {
+                                    selectedEmotion = "오류 발생: ${e.message}"
+                                } finally {
+                                    selectedEmotion = when (selectedEmotion) {
+                                        "기쁨" -> "😊"
+                                        "놀라움" -> "😲"
+                                        "사랑" -> "❤️"
+                                        "분노" -> "😡"
+                                        "슬픔" -> "😢"
+                                        "중립" -> "😐"
+                                        else -> selectedEmotion // 기본적으로 기존 값을 유지
+                                    }
+                                    isLoading = false
+                                }
+                            }
                             val dailyQuestionData = hashMapOf(
                                 "question" to questionText,
                                 "answer" to answer.value,
