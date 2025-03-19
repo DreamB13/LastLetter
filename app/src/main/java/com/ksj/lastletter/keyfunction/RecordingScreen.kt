@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.keyfunction
 
 import android.Manifest
 import android.content.Context
@@ -62,6 +62,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.ksj.lastletter.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

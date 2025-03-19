@@ -33,6 +33,10 @@ import androidx.navigation.navArgument
 import com.ksj.lastletter.dailyquestion.DailyQuestionDetail
 import com.ksj.lastletter.dailyquestion.DailyQuestionListScreen
 import com.ksj.lastletter.dailyquestion.DailyQuestionScreen
+import com.ksj.lastletter.keyfunction.InputTextScreen
+import com.ksj.lastletter.keyfunction.RecordingScreen
+import com.ksj.lastletter.keyfunction.YoursContextScreen
+import com.ksj.lastletter.keyfunction.YoursMainScreen
 import com.ksj.lastletter.login.LoginScreen
 import com.ksj.lastletter.login.PhoneTermScreen
 import com.ksj.lastletter.setting.SettingsScreen

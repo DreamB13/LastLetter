@@ -1,4 +1,4 @@
-package com.ksj.lastletter
+package com.ksj.lastletter.keyfunction
 
 import android.Manifest
 import android.content.Context
@@ -7,7 +7,6 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaPlayer
 import android.media.MediaRecorder
-import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
