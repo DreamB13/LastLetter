@@ -7,7 +7,6 @@ import android.media.AudioRecord
 import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,7 +33,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
@@ -69,10 +67,8 @@ import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.FastAPI.TextRequest
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -100,18 +96,7 @@ enum class RecordingState {
 fun RecordingScreen(navController: NavController, contactName: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var customDateText by remember { mutableStateOf("") }
-    var selectedEmotion by remember { mutableStateOf("") }
     var showExitDialog by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    if (isLoading) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("분석 중...") },
-            text = { CircularProgressIndicator() },
-            confirmButton = {}
-        )
-    }
 
     // 상태 관리 변수들
     var recordingState by remember { mutableStateOf(RecordingState.NOT_STARTED) }
@@ -390,6 +375,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
 
                 Text(
                     text = contactName,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
@@ -532,21 +518,13 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Button(
-                        onClick = {
-                            navController.navigate(
-                                "inputtextscreen/${Uri.encode(recognizedText)}/${
-                                    Uri.encode(
-                                        customDateText
-                                    )
-                                }/${Uri.encode(selectedEmotion)}"
-                            )
-                        },
+                        onClick = { navController.navigate("inputtextscreen") },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                     ) {
-                        Text("텍스트로 입력하기", color = Color.Black)
+                        Text("텍스트로 입력하기")
                     }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         // 봉투 아이콘을 클릭 가능하게 수정
@@ -593,6 +571,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         Text(
                             text = "클릭하면 녹음 시작",
                             textAlign = TextAlign.Center,
+                            fontSize = 16.sp,
                             color = Color.Black,
                             modifier = Modifier.padding(bottom = 32.dp)
                         )
@@ -772,7 +751,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 contentDescription = "Play Recording",
                                 modifier = Modifier.padding(end = 8.dp)
                             )
-                            Text("재생", color = Color.Black)
+                            Text("재생")
                         }
 
                         // STT 변환 버튼
@@ -843,7 +822,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             contentDescription = "Stop Playback",
                             modifier = Modifier.padding(end = 8.dp)
                         )
-                        Text("정지", color = Color.Black)
+                        Text("정지")
                     }
                 }
             } else if (recordingState == RecordingState.CONVERTING) {
@@ -885,7 +864,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
             if (showSaveDialog) {
                 var selectedOption by remember { mutableStateOf(0) }
                 // 두 번째 옵션 텍스트 상태 추가
-
+                var customDateText by remember { mutableStateOf("") }
 
                 AlertDialog(
                     onDismissRequest = { showSaveDialog = false },
@@ -917,6 +896,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         selectedColor = Color(0xFFFFDCA8)
                                     )
                                 )
+
                                 Text(
                                     text = "자동 저장",
                                     fontSize = 16.sp,
@@ -969,6 +949,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                     )
                                 }
                             }
+
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     },
@@ -976,46 +957,50 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                         Button(
                             onClick = {
                                 if (selectedOption == 0) {
-                                    showSaveDialog = false
-                                    isLoading = true
-                                    //자동저장 선택
-                                    RunModel(
-                                        coroutineScope,
-                                        recognizedText,
-                                        navController,
-                                        { customDateText = it },
-                                        { selectedEmotion = it }
-                                    )
-                                    isLoading = false
-                                } else {
-                                    showSaveDialog = false
+                                    // 자동 저장 옵션 선택 시 - 제목 추천 및 감정 분석 API 호출
                                     coroutineScope.launch {
-                                        isLoading = true
                                         try {
-                                            val response =
-                                                RetrofitInstance2.api.analyzeText(
-                                                    EmotionRequest(
-                                                        recognizedText
-                                                    )
-                                                )
-                                            selectedEmotion = response.emotion  // 서버 응답을 표시
-                                        } catch (e: Exception) {
-                                            selectedEmotion = "오류 발생: ${e.message}"
-                                        } finally {
-                                            isLoading = false
-                                            navController.navigate(
-                                                "inputtextscreen/${
-                                                    Uri.encode(
-                                                        recognizedText
-                                                    )
-                                                }/${Uri.encode(customDateText)}/${
-                                                    Uri.encode(
-                                                        selectedEmotion
-                                                    )
-                                                }"
+                                            // 제목 추천 API 호출
+                                            val titleResponse = RetrofitClient.apiService.generateText(
+                                                TextRequest(recognizedText)
                                             )
+                                            val recommendedTitle = titleResponse.generated_text
+
+                                            // 감정 분석 API 호출
+                                            val emotionResponse = RetrofitInstance2.api.analyzeText(
+                                                EmotionRequest(recognizedText)
+                                            )
+                                            val analyzedEmotion = emotionResponse.emotion
+
+                                            // URL 인코딩 적용
+                                            val encodedTitle = java.net.URLEncoder.encode(recommendedTitle, "UTF-8")
+                                            val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
+                                            val encodedEmotion = java.net.URLEncoder.encode(analyzedEmotion, "UTF-8")
+
+                                            // 로그 출력으로 값 확인
+                                            Log.d("RecordingScreen", "제목: $recommendedTitle, 감정: $analyzedEmotion")
+
+                                            // UI 스레드에서 네비게이션 실행
+                                            withContext(Dispatchers.Main) {
+                                                showSaveDialog = false
+                                                navController.navigate("inputtextscreen?title=${encodedTitle}&content=${encodedContent}&emotion=${encodedEmotion}")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("RecordingScreen", "Error processing text: ${e.message}")
+                                            // 에러 발생 시 기본 데이터로 전달
+                                            withContext(Dispatchers.Main) {
+                                                showSaveDialog = false
+                                                val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
+                                                navController.navigate("inputtextscreen?content=${encodedContent}")
+                                            }
                                         }
                                     }
+                                } else {
+                                    // 두 번째 옵션의 경우 사용자가 입력한 제목 사용
+                                    val encodedTitle = java.net.URLEncoder.encode(customDateText, "UTF-8")
+                                    val encodedContent = java.net.URLEncoder.encode(recognizedText, "UTF-8")
+                                    showSaveDialog = false
+                                    navController.navigate("inputtextscreen?title=${encodedTitle}&content=${encodedContent}")
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
@@ -1024,16 +1009,9 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             )
                         ) {
                             Text("저장")
-                            if (isLoading) {
-                                AlertDialog(
-                                    onDismissRequest = {},
-                                    title = { Text("분석 중...") },
-                                    text = { CircularProgressIndicator() },
-                                    confirmButton = {}
-                                )
-                            }
                         }
-                    },
+                    }
+                    ,
                     dismissButton = {
                         Button(
                             onClick = { showSaveDialog = false },
@@ -1051,44 +1029,3 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     }
 }
 
-fun RunModel(
-    coroutineScope: CoroutineScope,
-    recognizedText: String,
-    navController: NavController,
-    onCustomDateResult: (String) -> Unit,
-    onEmotionResult: (String) -> Unit
-) {
-    coroutineScope.launch {
-
-        val customDateDeferred = async {
-            try {
-                val response = RetrofitClient.apiService.generateText(TextRequest(recognizedText))
-                response.generated_text
-            } catch (e: Exception) {
-                "오류 발생: ${e.message}"
-            }
-        }
-        val emotionDeferred = async {
-            try {
-                val response = RetrofitInstance2.api.analyzeText(EmotionRequest(recognizedText))
-                response.emotion
-            } catch (e: Exception) {
-                "오류 발생: ${e.message}"
-            }
-        }
-
-        val customDate = customDateDeferred.await()
-        val selectedEmotion = emotionDeferred.await()
-
-        onCustomDateResult(customDate)
-        onEmotionResult(selectedEmotion)
-
-        navController.navigate(
-            "inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDate)}/${
-                Uri.encode(
-                    selectedEmotion
-                )
-            }"
-        )
-    }
-}

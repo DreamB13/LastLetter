@@ -18,10 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -56,28 +54,55 @@ import com.ksj.lastletter.FastAPI.TextRequest
 import kotlinx.coroutines.launch
 
 @Composable
-fun InputTextScreen(
-    navController: NavController,
-    recognizedText: String,
-    customDateText: String,
-    selectedEmotion: String
-) {
-    var titleText by remember { mutableStateOf(customDateText) }
+fun InputTextScreen(navController: NavController) {
+    // 네비게이션에서 전달된 파라미터 추출
+    val backStackEntry = navController.currentBackStackEntry
+    val arguments = backStackEntry?.arguments
+
+    var titleText by remember {
+        val encodedTitle = arguments?.getString("title") ?: ""
+        val decodedTitle = try {
+            java.net.URLDecoder.decode(encodedTitle, "UTF-8")
+        } catch (e: Exception) {
+            encodedTitle
+        }
+        mutableStateOf(decodedTitle)
+    }
+
+    var letterText by remember {
+        val encodedContent = arguments?.getString("content") ?: ""
+        val decodedContent = try {
+            java.net.URLDecoder.decode(encodedContent, "UTF-8")
+        } catch (e: Exception) {
+            encodedContent
+        }
+        mutableStateOf(decodedContent)
+    }
+
+    var selectedEmotion by remember {
+        val encodedEmotion = arguments?.getString("emotion") ?: "기쁨"
+        val decodedEmotion = try {
+            java.net.URLDecoder.decode(encodedEmotion, "UTF-8")
+        } catch (e: Exception) {
+            encodedEmotion
+        }
+        mutableStateOf(decodedEmotion)
+    }
     var maxTextLength by remember { mutableIntStateOf(500) }
-    var letterText by remember { mutableStateOf(recognizedText) }
-    var isLoading by remember { mutableStateOf(false) }
-    var emotion by remember { mutableStateOf(selectedEmotion) }
+// 날짜 파라미터 (없으면 현재 날짜)
+    val receivedDate = arguments?.getString("date")
+    val currentDate = java.text.SimpleDateFormat(
+        "MM월 dd일",
+        java.util.Locale.getDefault()
+    ).format(java.util.Date())
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
         Toast.makeText(context, "글자 수를 초과하셨습니다.", Toast.LENGTH_SHORT).show()
     }
-    val backStackEntry = navController.currentBackStackEntry
-    val arguments = backStackEntry?.arguments
-    val currentDate = java.text.SimpleDateFormat(
-        "MM월 dd일",
-        java.util.Locale.getDefault()
-    ).format(java.util.Date())
+
+
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
@@ -128,8 +153,8 @@ fun InputTextScreen(
             ) {
                 Spacer(modifier = Modifier.weight(4f))
                 EmotionSelector(
-                    selectedEmotion = emotion,
-                    onEmotionSelected = { newEmotion -> emotion = newEmotion },
+                    selectedEmotion = selectedEmotion,
+                    onEmotionSelected = { newEmotion -> selectedEmotion = newEmotion },
                     modifier = Modifier.weight(1.5f)
                 )
             }
@@ -178,7 +203,7 @@ fun InputTextScreen(
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(5f)
+                    .weight(4f)
             ) {
                 Button(
                     onClick = {/*광고 띄우면서 최대 글자수 1000으로 변경*/
@@ -204,46 +229,31 @@ fun InputTextScreen(
                                 "date" to currentDate,
                                 "title" to titleText,
                                 "content" to letterText,
-                                "emotion" to emotion,
+                                "emotion" to selectedEmotion,
                                 "timestamp" to com.google.firebase.Timestamp.now()
                             )
 
                             // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                            val contactId = arguments?.getString("contactId")
-                                ?: navController.previousBackStackEntry?.arguments?.getString("contactId")
-                                ?: ""
+                            val contactId = navController.previousBackStackEntry
+                                ?.arguments?.getString("contactId") ?: ""
 
                             db.collection("users").document(userId)
                                 .collection("Yours").document(contactId)
                                 .collection("letters").add(letterData)
-// 저장 버튼의 onClick 부분만 수정
                                 .addOnSuccessListener {
                                     Log.d("InputTextScreen", "Letter saved successfully")
-
-                                    // 저장 후 YoursContextScreen으로 직접 이동하도록 수정
-                                    try {
-                                        // contactId를 사용하여 YoursContextScreen으로 이동
-                                        navController.navigate("yoursContext/${contactId}") {
-                                            // 불필요한 화면 스택 제거
-                                            popUpTo("yoursContext/${contactId}") {
-                                                inclusive = false
-                                            }
+                                    // 저장 성공 시 YourContextScreen으로 이동
+                                    navController.navigate("yourscontextscreen/${contactId}") {
+                                        // 스택에서 현재 화면 제거
+                                        popUpTo("yourscontextscreen/${contactId}") {
+                                            inclusive = false
                                         }
-                                    } catch (e: Exception) {
-                                        Log.e("InputTextScreen", "Navigation error: ${e.message}")
-                                        // 오류 발생 시 대체 네비게이션
-                                        navController.popBackStack()
                                     }
                                 }
-
                                 .addOnFailureListener { e ->
                                     Log.e("InputTextScreen", "Error saving letter", e)
                                     // 에러 처리
-                                    Toast.makeText(
-                                        context,
-                                        "저장 실패: ${e.message}",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
+                                    Toast.makeText(context, "저장 실패: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
                         } else {
                             // 로그인되지 않은 경우
@@ -261,15 +271,12 @@ fun InputTextScreen(
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            isLoading = true
                             try {
                                 val response =
                                     RetrofitClient.apiService.generateText(TextRequest(letterText))
                                 titleText = response.generated_text  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 titleText = "오류 발생: ${e.message}"
-                            } finally {
-                                isLoading = false
                             }
                         }
                     },
@@ -284,15 +291,12 @@ fun InputTextScreen(
                 Button(
                     onClick = {
                         coroutineScope.launch {
-                            isLoading = true
                             try {
                                 val response =
                                     RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
-                                emotion = response.emotion  // 서버 응답을 표시
+                                selectedEmotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
-                                emotion = "오류 발생: ${e.message}"
-                            } finally {
-                                isLoading = false
+                                selectedEmotion = "오류 발생: ${e.message}"
                             }
                         }
                     },
@@ -308,17 +312,9 @@ fun InputTextScreen(
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(4f)
+                    .weight(5f)
             )
         }
-    }
-    if (isLoading) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("분석 중...") },
-            text = { CircularProgressIndicator() },
-            confirmButton = {}
-        )
     }
 }
 
@@ -330,15 +326,14 @@ fun EmotionSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val emotions = listOf("기쁨", "놀라움", "사랑", "슬픔", "분노", "중립","해당 없음")
+    val emotions = listOf("기쁨", "놀라움", "사랑", "슬픔", "분노", "중립")
     val emotionIcons = mapOf(
         "기쁨" to "😆",
         "놀라움" to "😲",
         "사랑" to "😍",
         "슬픔" to "😢",
         "분노" to "😡",
-        "중립" to "😐",
-        "해당 없음" to "??"
+        "중립" to "😐"
     )
 
     Box(
@@ -355,9 +350,9 @@ fun EmotionSelector(
         ) {
             Text(
                 text = "${emotionIcons[selectedEmotion]}",
+                fontSize = 30.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-                color = Color.Black,
+                modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(5.dp))
             Icon(
@@ -373,7 +368,7 @@ fun EmotionSelector(
         ) {
             emotions.forEach { emotion ->
                 DropdownMenuItem(
-                    text = { Text("${emotionIcons[emotion]} $emotion", color = Color.Black) },
+                    text = { Text("${emotionIcons[emotion]} $emotion") },
                     onClick = {
                         onEmotionSelected(emotion) // 선택된 감정을 부모로 전달
                         expanded = false
@@ -384,3 +379,10 @@ fun EmotionSelector(
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun InputTextScreenPreview() {
+    // NavController는 preview에서 바로 사용할 수 없으므로 임시로 NavController를 넣습니다.
+    val navController = rememberNavController() // NavController 생성
+    InputTextScreen(navController = navController) // Preview에서 InputTextScreen 호출
+}
