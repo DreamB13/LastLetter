@@ -1,5 +1,6 @@
 package com.ksj.lastletter.keyfunction
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
@@ -53,11 +56,11 @@ import com.ksj.lastletter.FastAPI.TextRequest
 import kotlinx.coroutines.launch
 
 @Composable
-fun InputTextScreen(navController: NavController) {
-    var titleText by remember { mutableStateOf("") }
-    var letterText by remember { mutableStateOf("") }
+fun InputTextScreen(navController: NavController, recognizedText: String, customDateText: String) {
+    var titleText by remember { mutableStateOf(customDateText) }
     var maxTextLength by remember { mutableIntStateOf(500) }
     var selectedEmotion by remember { mutableStateOf("기쁨") }
+    var letterText by remember { mutableStateOf(recognizedText) }
     var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -133,11 +136,13 @@ fun InputTextScreen(navController: NavController) {
                         .padding(0.dp)
                         .align(Alignment.CenterVertically)
                 )
-                Text("글자 수: ${letterText.length}/${maxTextLength}",
+                Text(
+                    "글자 수: ${letterText.length}/${maxTextLength}",
                     color = Color(0xffAFADAD),
                     modifier = Modifier
                         .padding(0.dp)
-                        .align(Alignment.CenterVertically))
+                        .align(Alignment.CenterVertically)
+                )
             }
             TextField(
                 value = letterText,
@@ -177,7 +182,37 @@ fun InputTextScreen(navController: NavController) {
                     )
                 }
                 Button(
-                    onClick = {/*저장하면서 YourContextScreen으로 스택 날리고 이동시켜야함.*/ },
+                    onClick = {/*저장 기능인데 감정 저장도 추가해줘야됨*/
+//                        val db = FirebaseFirestore.getInstance()
+//                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+//
+//                        if (userId != null) {
+//                            // 편지 데이터 생성
+//                            val letterData = hashMapOf(
+//                                "date" to currentDate,
+//                                "title" to customDateText,
+//                                "content" to recognizedText,
+//                                "timestamp" to com.google.firebase.Timestamp.now()
+//                            )
+//
+//                            // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
+//                            val contactId = navController.currentBackStackEntry
+//                                ?.arguments?.getString("contactId") ?: ""
+//
+//                            db.collection("users").document(userId)
+//                                .collection("Yours").document(contactId)
+//                                .collection("letters").add(letterData)
+//                                .addOnSuccessListener {
+//                                    Log.d(
+//                                        "RecordingScreen",
+//                                        "Letter saved successfully"
+//                                    )
+//                                }
+//                                .addOnFailureListener { e ->
+//                                    Log.e("RecordingScreen", "Error saving letter", e)
+//                                }
+//                        }
+                    },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                 ) {
@@ -191,11 +226,12 @@ fun InputTextScreen(navController: NavController) {
                         coroutineScope.launch {
                             isLoading = true
                             try {
-                                val response = RetrofitClient.apiService.generateText(TextRequest(letterText))
+                                val response =
+                                    RetrofitClient.apiService.generateText(TextRequest(letterText))
                                 titleText = response.generated_text  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 titleText = "오류 발생: ${e.message}"
-                            }finally {
+                            } finally {
                                 isLoading = false
                             }
                         }
@@ -213,11 +249,12 @@ fun InputTextScreen(navController: NavController) {
                         coroutineScope.launch {
                             isLoading = true
                             try {
-                                val response = RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
+                                val response =
+                                    RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
                                 selectedEmotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 selectedEmotion = "오류 발생: ${e.message}"
-                            }finally {
+                            } finally {
                                 isLoading = false
                             }
                         }
@@ -307,13 +344,5 @@ fun EmotionSelector(
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun InputTextScreenPreview() {
-    // NavController는 preview에서 바로 사용할 수 없으므로 임시로 NavController를 넣습니다.
-    val navController = rememberNavController() // NavController 생성
-    InputTextScreen(navController = navController) // Preview에서 InputTextScreen 호출
 }
 

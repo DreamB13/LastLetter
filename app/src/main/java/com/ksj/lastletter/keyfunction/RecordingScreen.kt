@@ -7,6 +7,7 @@ import android.media.AudioRecord
 import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -92,6 +93,7 @@ enum class RecordingState {
 fun RecordingScreen(navController: NavController, contactName: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    var customDateText by remember { mutableStateOf("") }
     var showExitDialog by remember { mutableStateOf(false) }
 
     // 상태 관리 변수들
@@ -514,7 +516,9 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Button(
-                        onClick = { navController.navigate("inputtextscreen") },
+                        onClick = {
+                            navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}")
+                                  },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                         modifier = Modifier
@@ -860,7 +864,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
             if (showSaveDialog) {
                 var selectedOption by remember { mutableStateOf(0) }
                 // 두 번째 옵션 텍스트 상태 추가
-                var customDateText by remember { mutableStateOf("") }
+
 
                 AlertDialog(
                     onDismissRequest = { showSaveDialog = false },
@@ -962,72 +966,11 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                     // 자동 저장 옵션 선택 시
                                     // TODO: 변환된 텍스트를 모델 서버로 전송
                                     // 예: sendTextToModelServer(recognizedText)
-
-                                    // Firebase에 저장
-                                    val db = FirebaseFirestore.getInstance()
-                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-                                    if (userId != null) {
-                                        // 편지 데이터 생성
-                                        val letterData = hashMapOf(
-                                            "date" to currentDate,
-                                            "title" to "음성 메모",
-                                            "content" to recognizedText,
-                                            "timestamp" to com.google.firebase.Timestamp.now()
-                                        )
-
-                                        // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                                        val contactId = navController.currentBackStackEntry
-                                            ?.arguments?.getString("contactId") ?: ""
-
-                                        db.collection("users").document(userId)
-                                            .collection("Yours").document(contactId)
-                                            .collection("letters").add(letterData)
-                                            .addOnSuccessListener {
-                                                Log.d(
-                                                    "RecordingScreen",
-                                                    "Letter saved successfully"
-                                                )
-                                            }
-                                            .addOnFailureListener { e ->
-                                                Log.e("RecordingScreen", "Error saving letter", e)
-                                            }
-                                    }
+                                    navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}")
                                 } else {
-                                    // 두 번째 옵션의 경우 사용자가 입력한 제목 사용
-                                    val db = FirebaseFirestore.getInstance()
-                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-                                    if (userId != null) {
-                                        // 편지 데이터 생성
-                                        val letterData = hashMapOf(
-                                            "date" to currentDate,
-                                            "title" to customDateText,
-                                            "content" to recognizedText,
-                                            "timestamp" to com.google.firebase.Timestamp.now()
-                                        )
-
-                                        // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                                        val contactId = navController.currentBackStackEntry
-                                            ?.arguments?.getString("contactId") ?: ""
-
-                                        db.collection("users").document(userId)
-                                            .collection("Yours").document(contactId)
-                                            .collection("letters").add(letterData)
-                                            .addOnSuccessListener {
-                                                Log.d(
-                                                    "RecordingScreen",
-                                                    "Letter saved successfully"
-                                                )
-                                            }
-                                            .addOnFailureListener { e ->
-                                                Log.e("RecordingScreen", "Error saving letter", e)
-                                            }
-                                    }
+                                    navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}")
+                                    showSaveDialog = false
                                 }
-
-                                showSaveDialog = false
-                                navController.popBackStack()
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFFDCA8),
