@@ -120,7 +120,6 @@ fun MyPageScreen(navController: NavController) {
                 Text(
                     text = "출석 체크",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontSize = 16.sp,
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(8.dp))

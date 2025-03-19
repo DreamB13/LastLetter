@@ -266,7 +266,6 @@ fun EmotionSelector(
         ) {
             Text(
                 text = "${emotionIcons[selectedEmotion]}",
-                fontSize = 30.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f)
             )

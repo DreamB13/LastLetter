@@ -11,43 +11,34 @@ import androidx.compose.ui.unit.sp
 import com.ksj.lastletter.setting.TextSizeOption
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    // 필요 시 색상 지정
+    // e.g. primary = Color(0xFF6200EE)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-    background = Color(0xFFFDFBF4),
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
-// 기본 라이트 컬러 스킴 (필요에 따라 커스터마이징)
-private val LightColors = lightColorScheme(
-    // 예: primary = Color(0xFF6200EE), secondary = Color(0xFF03DAC6) 등
+    background = Color(0xFFFDFBF4)
+    // 필요 시 색상 지정
 )
 
 @Composable
 fun LastLetterTheme(
     textSizeOption: TextSizeOption,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    // 선택된 옵션에 따른 Typography 정의 (필요에 따라 다른 스타일도 추가)
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+
+    // 선택된 옵션에 따른 Typography를 정의
     val typography = when (textSizeOption) {
-        TextSizeOption.SMALL -> Typography(
+        TextSizeOption.VERY_SMALL -> Typography(
             bodyLarge = TextStyle(fontSize = 12.sp),
             bodyMedium = TextStyle(fontSize = 12.sp),
             bodySmall = TextStyle(fontSize = 12.sp)
+        )
+        TextSizeOption.SMALL -> Typography(
+            bodyLarge = TextStyle(fontSize = 14.sp),
+            bodyMedium = TextStyle(fontSize = 14.sp),
+            bodySmall = TextStyle(fontSize = 14.sp)
         )
         TextSizeOption.MEDIUM -> Typography(
             bodyLarge = TextStyle(fontSize = 16.sp),
@@ -59,7 +50,7 @@ fun LastLetterTheme(
             bodyMedium = TextStyle(fontSize = 20.sp),
             bodySmall = TextStyle(fontSize = 20.sp)
         )
-        TextSizeOption.EXTRA_LARGE -> Typography(
+        TextSizeOption.VERY_LARGE -> Typography(
             bodyLarge = TextStyle(fontSize = 24.sp),
             bodyMedium = TextStyle(fontSize = 24.sp),
             bodySmall = TextStyle(fontSize = 24.sp)
@@ -67,6 +58,7 @@ fun LastLetterTheme(
     }
 
     MaterialTheme(
+        colorScheme = colorScheme,
         typography = typography,
         content = content
     )

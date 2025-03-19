@@ -77,7 +77,6 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 ) {
                     Text(
                         text = contactData.name,
-                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
                     )

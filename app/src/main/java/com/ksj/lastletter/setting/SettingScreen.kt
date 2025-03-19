@@ -1,5 +1,6 @@
 package com.ksj.lastletter.setting
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -7,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,9 +18,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
@@ -29,6 +34,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,7 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -128,6 +137,7 @@ fun SettingsScreen(navController: NavController) {
                 .padding(innerPadding)
                 .background(backgroundColor)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
             Card(
                 modifier = Modifier
@@ -204,14 +214,14 @@ fun SettingsScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("제안하기") { /* 제안하기 처리 */ }
                 Spacer(modifier = Modifier.height(8.dp))
-                Settiingitem("회원 탈퇴") { showDeleteAccountDialog = true }
-                Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("로그아웃") {
                     FirebaseAuth.getInstance().signOut()
                     navController.navigate("login") {
                         popUpTo("login") { inclusive = true }
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Settiingitem("회원 탈퇴") { showDeleteAccountDialog = true }
             }
         }
     }
@@ -303,6 +313,7 @@ fun SettingsScreen(navController: NavController) {
     }
 }
 
+@SuppressLint("MutableCollectionMutableState")
 @Composable
 fun DailyQuestionSelectionDialog(
     contacts: List<DocumentContact>,
@@ -310,7 +321,9 @@ fun DailyQuestionSelectionDialog(
     onDismiss: () -> Unit,
     onSave: (List<String>) -> Unit
 ) {
-    var tempSelectedIds by remember { mutableStateOf(initialSelectedIds.toMutableList()) }
+    // mutableStateListOf를 사용하여 리스트 변경 시 자동으로 recomposition이 일어나도록 함
+    val tempSelectedIds =
+        remember { mutableStateListOf<String>().apply { addAll(initialSelectedIds) } }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("일일질문 받을 사람 선택") },
@@ -320,22 +333,31 @@ fun DailyQuestionSelectionDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 4.dp)
+                            // Row 전체를 클릭해도 토글되도록 설정
+                            .clickable {
+                                if (tempSelectedIds.contains(documentContact.id)) {
+                                    tempSelectedIds.remove(documentContact.id)
+                                } else {
+                                    tempSelectedIds.add(documentContact.id)
+                                }
+                            },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
                             checked = tempSelectedIds.contains(documentContact.id),
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    if (!tempSelectedIds.contains(documentContact.id)) {
-                                        tempSelectedIds.add(documentContact.id)
-                                    }
+                            onCheckedChange = { checked ->
+                                if (checked) {
+                                    tempSelectedIds.add(documentContact.id)
                                 } else {
                                     tempSelectedIds.remove(documentContact.id)
                                 }
-                                tempSelectedIds = tempSelectedIds.toMutableList()
                             },
-                            colors = CheckboxDefaults.colors(checkedColor = Color(0xFF9AD28A))
+                            modifier = Modifier.size(24.dp),
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Color(0xFF9AD28A),
+                                checkmarkColor = Color.Black
+                            )
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = documentContact.contact.name, color = Color.Black)
@@ -344,7 +366,7 @@ fun DailyQuestionSelectionDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(tempSelectedIds) }) {
+            Button(onClick = { onSave(tempSelectedIds.toList()) }) {
                 Text("저장")
             }
         },
@@ -367,7 +389,6 @@ fun ContactRow(documentContact: DocumentContact, onEditClick: () -> Unit) {
         Text(
             text = documentContact.contact.name,
             modifier = Modifier.weight(1f),
-            fontSize = 16.sp,
             color = Color.Black
         )
         IconButton(onClick = onEditClick) {
@@ -388,60 +409,122 @@ fun EditContactDialog(
     onSave: (Contact) -> Unit,
     onDelete: () -> Unit
 ) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf(documentContact.contact.name) }
-    var phoneNumber by remember { mutableStateOf(documentContact.contact.phoneNumber) }
     var relationship by remember { mutableStateOf(documentContact.contact.relationship) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
-
+    var relationshipExpanded by remember { mutableStateOf(false) }
+    var newrelationship by remember { mutableStateOf("") }
+    var phoneNumber by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = if (documentContact.contact.phoneNumber.startsWith("010-"))
+                    documentContact.contact.phoneNumber
+                else "010-",
+                selection = TextRange("010-".length)
+            )
+        )
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("사용자 편집") },
         text = {
             Column {
+                // 이름: 최대 15자까지 입력 가능
                 TextField(
                     value = name,
-                    onValueChange = { name = it },
-                    label = { Text("이름") },
+                    onValueChange = { name = it.take(15) },
+                    label = { Text("이름 (최대 15자)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+                // 전화번호: "010-" 접두사를 사용하고, 이후 숫자 8자리를 입력받으며 4자리마다 하이픈(-)을 추가
+
                 TextField(
                     value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
-                    label = { Text("전화번호") },
-                    modifier = Modifier.fillMaxWidth()
+                    onValueChange = { newValue ->
+                        val prefix = "010-"
+                        // newValue.text가 항상 prefix로 시작하도록 강제
+                        val currentText =
+                            if (newValue.text.startsWith(prefix)) newValue.text else prefix + newValue.text.filter { it.isDigit() }
+                        // 접두사 이후의 사용자 입력 추출 (숫자만)
+                        val userInput = currentText.substring(prefix.length)
+                        val digits = userInput.filter { it.isDigit() }
+                        // 최대 8자리까지만 허용
+                        val limitedDigits = digits.take(8)
+                        // 4자리 이상이면 중간에 하이픈 삽입 (예: "1234-5678")
+                        val formattedDigits = if (limitedDigits.length > 4) {
+                            "${limitedDigits.substring(0, 4)}-${limitedDigits.substring(4)}"
+                        } else {
+                            limitedDigits
+                        }
+                        // 최종 텍스트: 고정된 prefix + 포맷팅된 숫자
+                        val newText = prefix + formattedDigits
+                        // 커서 위치는 항상 prefix 이후로 고정 (사용자가 접두사 앞쪽으로 이동하지 못함)
+                        val newCursorPosition = maxOf(newValue.selection.start, prefix.length)
+                        phoneNumber =
+                            TextFieldValue(text = newText, selection = TextRange(newCursorPosition))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = relationship,
-                    onValueChange = { relationship = it },
-                    label = { Text("관계") },
+                // 관계: 드롭다운 메뉴로 선택
+                Text(text = "관계")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { relationshipExpanded = true }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = relationship.ifEmpty { "관계 선택" }, color = Color.Black)
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "드롭다운 열기",
+                        tint = Color.Black
+                    )
+                }
+                DropdownMenu(
+                    expanded = relationshipExpanded,
+                    onDismissRequest = { relationshipExpanded = false },
                     modifier = Modifier.fillMaxWidth()
-                )
+                ) {
+                    val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
+                    relationships.forEach { rel ->
+                        DropdownMenuItem(
+                            text = { Text(text = rel) },
+                            onClick = {
+                                relationship = rel
+                                relationshipExpanded = false
+                            }
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(onClick = { showDeleteConfirmation = true }) {
-                    Text("삭제")
-                }
-                Button(onClick = onDismiss) {
-                    Text("취소")
-                }
-                Button(onClick = {
-                    if (name.isNotBlank()) {
-                        onSave(Contact(name, phoneNumber, relationship))
-                    }
-                }) {
-                    Text("저장")
-                }
+            // 확인 버튼 구현
+            Button(onClick = {
+                val updatedContact = Contact(
+                    name = name,
+                    phoneNumber = phoneNumber.text,
+                    relationship = relationship
+                )
+                onSave(updatedContact)
+                Toast.makeText(context, "사용자가 수정되었습니다.", Toast.LENGTH_SHORT).show()
+                onDismiss()
+            }) {
+                Text("저장")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("취소")
             }
         }
     )
-
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
@@ -501,8 +584,25 @@ fun ChangePhoneDialog(
                 OutlinedTextField(
                     value = newPhoneNumber,
                     onValueChange = { input ->
+                        // "010-" 접두사 고정
+                        val prefix = "010-"
+                        // 입력값이 "010-"로 시작하지 않으면 접두사 추가
+                        if (!input.startsWith(prefix)) {
+                            newPhoneNumber = prefix + input.filter { it.isDigit() }
+                        }
+
                         val digits = input.filter { it.isDigit() }
                         newPhoneNumber = digits.take(8)
+                        // 4자리 이상이면 하이픈(-) 삽입
+                        if (newPhoneNumber.length > 4) {
+                            newPhoneNumber =
+                                "${
+                                    newPhoneNumber.substring(
+                                        0,
+                                        4
+                                    )
+                                }-${newPhoneNumber.substring(4)}"
+                        }
                     },
                     label = { Text("새 전화번호 (010 고정)") },
                     placeholder = { Text("예: 12345678") },
@@ -510,7 +610,6 @@ fun ChangePhoneDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(text = "전화번호는 010-xxxx-xxxx 형식으로 저장됩니다.")
             }
         },
         confirmButton = {
@@ -519,7 +618,7 @@ fun ChangePhoneDialog(
                     val formatted = formatPhoneNumber(newPhoneNumber)
                     onSave(formatted)
                 },
-                enabled = newPhoneNumber.length == 8
+                enabled = newPhoneNumber.length == 9
             ) {
                 Text("저장")
             }
@@ -668,7 +767,11 @@ private fun performAccountDeletion(
                         popUpTo("login") { inclusive = true }
                     }
                 } else {
-                    Toast.makeText(context, "회원 탈퇴 실패: ${deleteTask.exception?.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "회원 탈퇴 실패: ${deleteTask.exception?.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }

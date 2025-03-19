@@ -89,7 +89,6 @@ fun YoursMainScreen(navController: NavController) {
         ) {
             Text(
                 text = "남은 너에게",
-                fontSize = 20.sp,
                 color = Color.Black,
                 modifier = Modifier.align(Alignment.Start)
             )

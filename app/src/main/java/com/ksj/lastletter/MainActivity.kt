@@ -45,23 +45,31 @@ import com.ksj.lastletter.setting.TextSizeSettingScreen
 import com.ksj.lastletter.setting.getTextSizeOption
 import com.ksj.lastletter.ui.MyPageScreen
 import com.ksj.lastletter.ui.theme.LastLetterTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             val context = LocalContext.current
+
+            // 텍스트 사이즈 옵션 상태
             var selectedTextSize by remember { mutableStateOf(TextSizeOption.MEDIUM) }
+
+            // 화면이 처음 구성될 때 DataStore에서 폰트 크기 불러오기
             LaunchedEffect(Unit) {
-                selectedTextSize = getTextSizeOption(context)
+                val option = withContext(Dispatchers.IO) {
+                    getTextSizeOption(context)
+                }
+                selectedTextSize = option
             }
+
             LastLetterTheme(textSizeOption = selectedTextSize) {
                 val navController = rememberNavController()
-                // 현재 라우트를 관찰
+
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-
-                // "login" 화면일 때는 bottomBar를 숨긴다
                 val showBottomBar = currentRoute != "login"
 
                 Scaffold(
@@ -115,7 +123,9 @@ class MainActivity : ComponentActivity() {
                             TextSizeSettingScreen(
                                 navController = navController,
                                 selectedTextSize = selectedTextSize,
-                                onTextSizeChange = { newSize -> selectedTextSize = newSize }
+                                onTextSizeChange = { newSize ->
+                                    selectedTextSize = newSize
+                                }
                             )
                         }
                         composable("dailyQuestionList") {
@@ -129,7 +139,6 @@ class MainActivity : ComponentActivity() {
                             DailyQuestionDetail(navController = navController, docId = docId)
                         }
                         composable("myPage") {
-                            // MyPageScreen 내부에서 AppViewModel을 이용해 캐시된 데이터를 사용합니다.
                             MyPageScreen(navController = navController)
                         }
                         composable("phoneTerm") {
@@ -149,6 +158,7 @@ class MainActivity : ComponentActivity() {
 fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 4.dp

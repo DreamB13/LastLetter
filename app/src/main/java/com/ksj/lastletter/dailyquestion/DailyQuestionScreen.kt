@@ -38,12 +38,12 @@ import java.time.LocalDate
 // 감정에 따른 배경색 매핑 함수 (필요에 따라 색상을 수정하세요)
 fun getColorForEmotion(emotion: String): Color {
     return when (emotion) {
-        "😊" -> Color(0xFFFFF176)  // 기쁨: 연노랑
-        "😲" -> Color(0xFF81D4FA)  // 놀라움: 연파랑
-        "❤️" -> Color(0xFFFF8A80)  // 사랑: 연빨강
-        "😡" -> Color(0xFFFF5252)  // 분노: 빨강
-        "😢" -> Color(0xFF64B5F6)  // 슬픔: 연파랑(조금 어둡게)
-        "😐" -> Color(0xFFBDBDBD)  // 중립: 회색
+        "😊" -> Color(0xFFFFF5E9)  // 기쁨: 연노랑
+        "😲" -> Color(0xFFE9FFE9)  // 놀라움: 연파랑
+        "❤️" -> Color(0xFFFFE9E9)  // 사랑: 연빨강
+        "😡" -> Color(0xFFFFE9FE)  // 분노: 빨강
+        "😢" -> Color(0xFFE9EDFF)  // 슬픔: 연파랑(조금 어둡게)
+        "😐" -> Color(0xFFF7FFC8)  // 중립: 회색
         else -> Color(0xFFE9F4F7)
     }
 }
@@ -187,7 +187,8 @@ fun DailyQuestionScreen(navController: NavController) {
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
+                        .height(200.dp)
+                        .padding(16.dp),
                     placeholder = { Text("답변을 적어주세요") },
                     shape = RoundedCornerShape(8.dp),
                     maxLines = 5,
@@ -199,7 +200,7 @@ fun DailyQuestionScreen(navController: NavController) {
                 )
                 Text(
                     text = "${answer.value.length}/$maxLength 자",
-                    modifier = Modifier.padding(top = 4.dp).align(Alignment.End)
+                    modifier = Modifier.padding(top = 4.dp, end = 16.dp).align(Alignment.End)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -226,6 +227,7 @@ fun DailyQuestionScreen(navController: NavController) {
                         }
                     },
                     modifier = Modifier.align(Alignment.End)
+                        .padding(end = 16.dp)
                 ) {
                     Text("저장하기")
                 }
@@ -233,11 +235,12 @@ fun DailyQuestionScreen(navController: NavController) {
                 // 보기 모드: 답변 박스의 배경색은 선택한 감정에 따라 변경
                 Box(
                     modifier = Modifier
+                        .padding(horizontal = 16.dp)
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp)
                         .clip(RectangleShape)
                         .background(getColorForEmotion(selectedEmotion))
                         .padding(16.dp)
+
                 ) {
                     Text(
                         text = answer.value,
