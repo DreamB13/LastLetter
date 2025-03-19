@@ -18,10 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -280,7 +278,6 @@ fun InputTextScreen(
                                         navController.popBackStack()
                                     }
                                 }
-
                                 .addOnFailureListener { e ->
                                     Log.e("InputTextScreen", "Error saving letter", e)
                                     // 에러 처리
@@ -303,67 +300,13 @@ fun InputTextScreen(
                         color = Color.Black
                     )
                 }
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            isLoading = true
-                            try {
-                                val response =
-                                    RetrofitClient.apiService.generateText(TextRequest(letterText))
-                                titleText = response.generated_text  // 서버 응답을 표시
-                            } catch (e: Exception) {
-                                titleText = "오류 발생: ${e.message}"
-                            } finally {
-                                isLoading = false
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
-                ) {
-                    Text(
-                        "제목 추천",
-                        color = Color.Black
-                    )
-                }
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            isLoading = true
-                            try {
-                                val response =
-                                    RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
-                                emotion = response.emotion  // 서버 응답을 표시
-                            } catch (e: Exception) {
-                                emotion = "오류 발생: ${e.message}"
-                            } finally {
-                                isLoading = false
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
-                ) {
-                    Text(
-                        "감정 분석",
-                        color = Color.Black
-                    )
-                }
             }
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(4f)
+                    .weight(5f)
             )
         }
-    }
-    if (isLoading) {
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("분석 중...") },
-            text = { CircularProgressIndicator() },
-            confirmButton = {}
-        )
     }
 }
 
