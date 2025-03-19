@@ -133,11 +133,13 @@ fun InputTextScreen(navController: NavController) {
                         .padding(0.dp)
                         .align(Alignment.CenterVertically)
                 )
-                Text("글자 수: ${letterText.length}/${maxTextLength}",
+                Text(
+                    "글자 수: ${letterText.length}/${maxTextLength}",
                     color = Color(0xffAFADAD),
                     modifier = Modifier
                         .padding(0.dp)
-                        .align(Alignment.CenterVertically))
+                        .align(Alignment.CenterVertically)
+                )
             }
             TextField(
                 value = letterText,
@@ -190,7 +192,8 @@ fun InputTextScreen(navController: NavController) {
                     onClick = {
                         coroutineScope.launch {
                             try {
-                                val response = RetrofitClient.apiService.generateText(TextRequest(letterText))
+                                val response =
+                                    RetrofitClient.apiService.generateText(TextRequest(letterText))
                                 titleText = response.generated_text  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 titleText = "오류 발생: ${e.message}"
@@ -209,7 +212,8 @@ fun InputTextScreen(navController: NavController) {
                     onClick = {
                         coroutineScope.launch {
                             try {
-                                val response = RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
+                                val response =
+                                    RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
                                 selectedEmotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 selectedEmotion = "오류 발생: ${e.message}"
@@ -267,7 +271,8 @@ fun EmotionSelector(
             Text(
                 text = "${emotionIcons[selectedEmotion]}",
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                color = Color.Black,
             )
             Spacer(modifier = Modifier.width(5.dp))
             Icon(
@@ -283,7 +288,7 @@ fun EmotionSelector(
         ) {
             emotions.forEach { emotion ->
                 DropdownMenuItem(
-                    text = { Text("${emotionIcons[emotion]} $emotion") },
+                    text = { Text("${emotionIcons[emotion]} $emotion", color = Color.Black) },
                     onClick = {
                         onEmotionSelected(emotion) // 선택된 감정을 부모로 전달
                         expanded = false

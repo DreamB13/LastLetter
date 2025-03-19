@@ -1,5 +1,6 @@
 package com.ksj.lastletter.ui
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -142,7 +143,6 @@ fun MyPageScreen(navController: NavController) {
                     Text(
                         text = "$currentAttendance/$totalAttendance",
                         color = Color.Gray,
-                        fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
 

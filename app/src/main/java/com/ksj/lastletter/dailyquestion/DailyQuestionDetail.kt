@@ -105,7 +105,7 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                         horizontalArrangement = Arrangement.End
                     ) {
                         TextButton(onClick = {
-                            // 광고 보고 수정하기 로직 구현
+                            // navController.navigate("adScreen")
                         }) {
                             Text("광고 보고 수정하기", color = Color.Gray)
                         }

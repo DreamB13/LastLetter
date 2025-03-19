@@ -202,12 +202,12 @@ fun YoursMainScreen(navController: NavController) {
                         }
                     }
                 }) {
-                    Text("저장")
+                    Text("저장", color = Color.Black)
                 }
             },
             dismissButton = {
                 Button(onClick = { showDialog = false }) {
-                    Text("취소")
+                    Text("취소", color = Color.Black)
                 }
             }
         )
@@ -277,6 +277,6 @@ fun AddButton(onClick: () -> Unit) {
             .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = "+", fontSize = 24.sp, color = Color(0xFFFFDCA8))
+        Text(text = "+", color = Color(0xFFFFDCA8))
     }
 }

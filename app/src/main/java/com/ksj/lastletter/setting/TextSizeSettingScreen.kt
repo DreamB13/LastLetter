@@ -133,7 +133,7 @@ fun TextSizeSettingScreen(
                     onDismissRequest = { expanded = false },
                     modifier = Modifier.fillMaxWidth(0.9f)
                 ) {
-                    TextSizeOption.values().forEach { option ->
+                    TextSizeOption.entries.forEach { option ->
                         DropdownMenuItem(
                             text = {
                                 Row(

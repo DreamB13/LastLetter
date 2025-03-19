@@ -200,7 +200,8 @@ fun DailyQuestionScreen(navController: NavController) {
                 )
                 Text(
                     text = "${answer.value.length}/$maxLength 자",
-                    modifier = Modifier.padding(top = 4.dp, end = 16.dp).align(Alignment.End)
+                    modifier = Modifier.padding(top = 4.dp, end = 16.dp).align(Alignment.End),
+                    color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
@@ -229,7 +230,7 @@ fun DailyQuestionScreen(navController: NavController) {
                     modifier = Modifier.align(Alignment.End)
                         .padding(end = 16.dp)
                 ) {
-                    Text("저장하기")
+                    Text("저장하기", color = Color.Black)
                 }
             } else {
                 // 보기 모드: 답변 박스의 배경색은 선택한 감정에 따라 변경
