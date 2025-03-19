@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-                val showBottomBar = currentRoute != "login"
+                val showBottomBar = currentRoute != "login" && currentRoute != "phoneTerm/{preFilledPhone}"
 
                 Scaffold(
                     bottomBar = {
