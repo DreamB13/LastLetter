@@ -8,7 +8,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +29,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -83,6 +83,18 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+//────────────────────────────────────────────────────────────────────────────
+// 공통 다이얼로그 스타일
+//────────────────────────────────────────────────────────────────────────────
+private val DialogShape = RoundedCornerShape(20.dp)
+private val DialogBackground = Color(0xFFFFF2E3) // 연한 살구색 (예시)
+private val ConfirmButtonColor = Color(0xFFB2A7FF) // 보라색 (확인)
+private val DangerButtonColor = Color(0xFFFFB2A7)  // 핑크 (위험/삭제)
+private val CancelButtonColor = Color.LightGray      // 취소
+
+//────────────────────────────────────────────────────────────────────────────
+// SettingsScreen (기본 화면)
+//────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController) {
@@ -91,7 +103,6 @@ fun SettingsScreen(navController: NavController) {
     var editingContact by remember { mutableStateOf<DocumentContact?>(null) }
     var selectedDailyQuestionContactIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var showDailyQuestionSelectionDialog by remember { mutableStateOf(false) }
-    // 전화번호 변경, 회원 탈퇴 다이얼로그 표시 여부
     var showChangePhoneDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -140,6 +151,7 @@ fun SettingsScreen(navController: NavController) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
+            // 일일질문 받을 사람 목록 카드
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -187,6 +199,7 @@ fun SettingsScreen(navController: NavController) {
                 }
             }
 
+            // 편지 받을 사람 목록 카드
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -204,14 +217,12 @@ fun SettingsScreen(navController: NavController) {
                         contacts.forEachIndexed { _, documentContact ->
                             ContactRow(documentContact = documentContact) {
                                 editingContact = documentContact
-
                             }
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 4.dp),
                                 color = Color.Black,
                                 thickness = 1.dp
                             )
-
                         }
                     }
                 }
@@ -219,6 +230,7 @@ fun SettingsScreen(navController: NavController) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // 설정 메뉴 항목들
             Column(modifier = Modifier.fillMaxWidth()) {
                 Settiingitem("글자 크기 변경") { navController.navigate("textSizeSetting") }
                 Settiingitem("전화번호 변경") { showChangePhoneDialog = true }
@@ -310,8 +322,7 @@ fun SettingsScreen(navController: NavController) {
                             Toast.makeText(context, "전화번호가 변경되었습니다.", Toast.LENGTH_SHORT).show()
                         }
                         .addOnFailureListener { e ->
-                            Toast.makeText(context, "전화번호 변경 실패: ${e.message}", Toast.LENGTH_SHORT)
-                                .show()
+                            Toast.makeText(context, "전화번호 변경 실패: ${e.message}", Toast.LENGTH_SHORT).show()
                         }
                 }
             }
@@ -326,6 +337,35 @@ fun SettingsScreen(navController: NavController) {
     }
 }
 
+//────────────────────────────────────────────────────────────────────────────
+// ContactRow
+//────────────────────────────────────────────────────────────────────────────
+@Composable
+fun ContactRow(documentContact: DocumentContact, onEditClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = documentContact.contact.name,
+            modifier = Modifier.weight(1f),
+            color = Color.Black
+        )
+        IconButton(onClick = onEditClick) {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "편집",
+                tint = Color.Black
+            )
+        }
+    }
+}
+
+//────────────────────────────────────────────────────────────────────────────
+// DailyQuestionSelectionDialog: 일일질문 받을 사람 선택 다이얼로그
+//────────────────────────────────────────────────────────────────────────────
 @SuppressLint("MutableCollectionMutableState")
 @Composable
 fun DailyQuestionSelectionDialog(
@@ -334,20 +374,19 @@ fun DailyQuestionSelectionDialog(
     onDismiss: () -> Unit,
     onSave: (List<String>) -> Unit
 ) {
-    // mutableStateListOf를 사용하여 리스트 변경 시 자동으로 recomposition이 일어나도록 함
-    val tempSelectedIds =
-        remember { mutableStateListOf<String>().apply { addAll(initialSelectedIds) } }
+    val tempSelectedIds = remember { mutableStateListOf<String>().apply { addAll(initialSelectedIds) } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("일일질문 받을 사람 선택") },
+        shape = DialogShape,
+        containerColor = DialogBackground,
+        title = { Text("일일질문 받을 사람 선택", fontSize = 18.sp, color = Color.Black) },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 contacts.forEach { documentContact ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
-                            // Row 전체를 클릭해도 토글되도록 설정
                             .clickable {
                                 if (tempSelectedIds.contains(documentContact.id)) {
                                     tempSelectedIds.remove(documentContact.id)
@@ -379,41 +418,32 @@ fun DailyQuestionSelectionDialog(
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(tempSelectedIds.toList()) }) {
-                Text("저장")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = { onSave(tempSelectedIds.toList()) },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                ) {
+                    Text("저장", color = Color.White)
+                }
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                ) {
+                    Text("취소", color = Color.White)
+                }
             }
         }
     )
 }
 
-@Composable
-fun ContactRow(documentContact: DocumentContact, onEditClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = documentContact.contact.name,
-            modifier = Modifier.weight(1f),
-            color = Color.Black
-        )
-        IconButton(onClick = onEditClick) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "편집",
-                tint = Color.Black
-            )
-        }
-    }
-}
-
+//────────────────────────────────────────────────────────────────────────────
+// EditContactDialog: 사용자 편집 다이얼로그
+//────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditContactDialog(
@@ -425,9 +455,7 @@ fun EditContactDialog(
     val context = LocalContext.current
     var name by remember { mutableStateOf(documentContact.contact.name) }
     var relationship by remember { mutableStateOf(documentContact.contact.relationship) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
     var relationshipExpanded by remember { mutableStateOf(false) }
-    var newrelationship by remember { mutableStateOf("") }
     var phoneNumber by remember {
         mutableStateOf(
             TextFieldValue(
@@ -438,66 +466,105 @@ fun EditContactDialog(
             )
         )
     }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    // 삭제 확인 다이얼로그
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            shape = DialogShape,
+            containerColor = DialogBackground,
+            title = { Text("정말로 삭제하시겠습니까?", fontSize = 18.sp, color = Color.Black) },
+            text = { Text("저장된 정보와 작성한 편지가 모두 삭제됩니다.", fontSize = 14.sp, color = Color.Black) },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Button(
+                        onClick = {
+                            onDelete()
+                            showDeleteConfirmation = false
+                        },
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerButtonColor)
+                    ) {
+                        Text("예, 삭제하겠습니다", color = Color.White)
+                    }
+                    Button(
+                        onClick = { showDeleteConfirmation = false },
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                    ) {
+                        Text("취소", color = Color.White)
+                    }
+                }
+            }
+        )
+    }
+
+    // 사용자 편집 메인 다이얼로그
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("사용자 편집") },
+        shape = DialogShape,
+        containerColor = DialogBackground,
+        title = { Text("사용자 편집", fontSize = 18.sp, color = Color.Black) },
         text = {
-            Column {
-                // 이름: 최대 15자까지 입력 가능
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("상대방 이름 (별명)", fontSize = 14.sp, color = Color.Black)
                 TextField(
                     value = name,
                     onValueChange = { name = it.take(15) },
-                    label = { Text("이름 (최대 15자)") },
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = { Text("남편") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                // 전화번호: "010-" 접두사를 사용하고, 이후 숫자 8자리를 입력받으며 4자리마다 하이픈(-)을 추가
-
+                Text("전화번호", fontSize = 14.sp, color = Color.Black)
                 TextField(
                     value = phoneNumber,
                     onValueChange = { newValue ->
                         val prefix = "010-"
-                        // newValue.text가 항상 prefix로 시작하도록 강제
-                        val currentText =
-                            if (newValue.text.startsWith(prefix)) newValue.text else prefix + newValue.text.filter { it.isDigit() }
-                        // 접두사 이후의 사용자 입력 추출 (숫자만)
-                        val userInput = currentText.substring(prefix.length)
-                        val digits = userInput.filter { it.isDigit() }
-                        // 최대 8자리까지만 허용
+                        val currentText = if (newValue.text.startsWith(prefix)) newValue.text
+                        else prefix + newValue.text.filter { it.isDigit() }
+                        val digits = currentText.substring(prefix.length).filter { it.isDigit() }
                         val limitedDigits = digits.take(8)
-                        // 4자리 이상이면 중간에 하이픈 삽입 (예: "1234-5678")
-                        val formattedDigits = if (limitedDigits.length > 4) {
+                        val formattedDigits = if (limitedDigits.length > 4)
                             "${limitedDigits.substring(0, 4)}-${limitedDigits.substring(4)}"
-                        } else {
-                            limitedDigits
-                        }
-                        // 최종 텍스트: 고정된 prefix + 포맷팅된 숫자
+                        else limitedDigits
                         val newText = prefix + formattedDigits
-                        // 커서 위치는 항상 prefix 이후로 고정 (사용자가 접두사 앞쪽으로 이동하지 못함)
                         val newCursorPosition = maxOf(newValue.selection.start, prefix.length)
-                        phoneNumber =
-                            TextFieldValue(text = newText, selection = TextRange(newCursorPosition))
+                        phoneNumber = TextFieldValue(text = newText, selection = TextRange(newCursorPosition))
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("010-8729-7595") },
+                    shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                // 관계: 드롭다운 메뉴로 선택
-                Text(text = "관계")
-                Row(
+                Text("상대방과의 관계", fontSize = 14.sp, color = Color.Black)
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { relationshipExpanded = true }
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .background(Color.White, shape = RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    Text(text = relationship.ifEmpty { "관계 선택" }, color = Color.Black)
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowRight,
-                        contentDescription = "드롭다운 열기",
-                        tint = Color.Black
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(if (relationship.isEmpty()) "배우자" else relationship, color = Color.Black)
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowRight,
+                            contentDescription = "드롭다운 열기",
+                            tint = Color.Black
+                        )
+                    }
                 }
                 DropdownMenu(
                     expanded = relationshipExpanded,
@@ -507,7 +574,7 @@ fun EditContactDialog(
                     val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
                     relationships.forEach { rel ->
                         DropdownMenuItem(
-                            text = { Text(text = rel) },
+                            text = { Text(rel, color = Color.Black) },
                             onClick = {
                                 relationship = rel
                                 relationshipExpanded = false
@@ -518,70 +585,48 @@ fun EditContactDialog(
             }
         },
         confirmButton = {
-            // 확인 버튼 구현
-            Button(onClick = {
-                val updatedContact = Contact(
-                    name = name,
-                    phoneNumber = phoneNumber.text,
-                    relationship = relationship
-                )
-                onSave(updatedContact)
-                Toast.makeText(context, "사용자가 수정되었습니다.", Toast.LENGTH_SHORT).show()
-                onDismiss()
-            }) {
-                Text("저장")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = {
+                        val updatedContact = Contact(
+                            name = name,
+                            phoneNumber = phoneNumber.text,
+                            relationship = relationship
+                        )
+                        onSave(updatedContact)
+                        Toast.makeText(context, "사용자가 수정되었습니다.", Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                ) {
+                    Text("저장", color = Color.White)
+                }
+                Button(
+                    onClick = { showDeleteConfirmation = true },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerButtonColor)
+                ) {
+                    Text("삭제하기", color = Color.White)
+                }
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                ) {
+                    Text("취소", color = Color.White)
+                }
             }
         }
     )
-    if (showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text("삭제 확인") },
-            text = { Text("정말로 삭제 하시겠습니까?\n저장 되어 있던 정보와 작성한 편지가 모두 삭제됩니다") },
-            confirmButton = {
-                Button(onClick = {
-                    onDelete()
-                    showDeleteConfirmation = false
-                }) {
-                    Text("삭제")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showDeleteConfirmation = false }) {
-                    Text("삭제 취소")
-                }
-            }
-        )
-    }
 }
 
-@Composable
-fun Settiingitem(text: String, click: () -> Unit = {}) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
-            .padding(16.dp)
-            .clickable { click() }
-    ) {
-        Text(text = text)
-        Icon(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(start = 8.dp),
-            imageVector = Icons.Default.KeyboardArrowRight,
-            contentDescription = text,
-            tint = Color.Black
-        )
-    }
-}
-
+//────────────────────────────────────────────────────────────────────────────
 // ChangePhoneDialog: 전화번호 변경 다이얼로그
+//────────────────────────────────────────────────────────────────────────────
 @Composable
 fun ChangePhoneDialog(
     onDismiss: () -> Unit,
@@ -591,34 +636,24 @@ fun ChangePhoneDialog(
     var newPhoneNumber by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("전화번호 변경") },
+        shape = DialogShape,
+        containerColor = DialogBackground,
+        title = { Text("전화번호 변경", fontSize = 18.sp, color = Color.Black) },
         text = {
             Column {
                 OutlinedTextField(
                     value = newPhoneNumber,
                     onValueChange = { input ->
-                        // "010-" 접두사 고정
                         val prefix = "010-"
-                        // 입력값이 "010-"로 시작하지 않으면 접두사 추가
-                        if (!input.startsWith(prefix)) {
-                            newPhoneNumber = prefix + input.filter { it.isDigit() }
-                        }
-
                         val digits = input.filter { it.isDigit() }
-                        newPhoneNumber = digits.take(8)
-                        // 4자리 이상이면 하이픈(-) 삽입
-                        if (newPhoneNumber.length > 4) {
-                            newPhoneNumber =
-                                "${
-                                    newPhoneNumber.substring(
-                                        0,
-                                        4
-                                    )
-                                }-${newPhoneNumber.substring(4)}"
-                        }
+                        val limited = digits.take(8)
+                        val formatted = if (limited.length > 4)
+                            "${limited.substring(0, 4)}-${limited.substring(4)}"
+                        else limited
+                        newPhoneNumber = prefix + formatted
                     },
                     label = { Text("새 전화번호 (010 고정)") },
-                    placeholder = { Text("예: 12345678") },
+                    placeholder = { Text("예: 010-1234-5678") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -626,26 +661,33 @@ fun ChangePhoneDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val formatted = formatPhoneNumber(newPhoneNumber)
-                    onSave(formatted)
-                },
-                enabled = newPhoneNumber.length == 9
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Text("저장")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
+                Button(
+                    onClick = { onSave(formatPhoneNumber(newPhoneNumber)) },
+                    enabled = newPhoneNumber.length >= 13,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                ) {
+                    Text("저장", color = Color.White)
+                }
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                ) {
+                    Text("취소", color = Color.White)
+                }
             }
         }
     )
 }
 
-// DeleteAccountDialog: 회원 탈퇴 다이얼로그 (재인증 포함)
-// DeleteAccountFlow를 호출하여 재인증 후 탈퇴 진행
+//────────────────────────────────────────────────────────────────────────────
+// DeleteAccountFlow: 회원 탈퇴 및 재인증 다이얼로그
+//────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeleteAccountFlow(
@@ -671,7 +713,6 @@ fun DeleteAccountFlow(
     )
 }
 
-// DeleteAccountDialog: 회원 탈퇴 확인 다이얼로그
 @Composable
 fun DeleteAccountDialog(
     onDismiss: () -> Unit,
@@ -679,22 +720,34 @@ fun DeleteAccountDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("회원 탈퇴 확인") },
-        text = { Text("정말로 회원 탈퇴하시겠습니까?\n탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.") },
+        shape = DialogShape,
+        containerColor = DialogBackground,
+        title = { Text("회원 탈퇴 확인", fontSize = 18.sp, color = Color.Black) },
+        text = { Text("정말로 회원 탈퇴하시겠습니까?\n탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.", fontSize = 14.sp, color = Color.Black) },
         confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("탈퇴")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("취소")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = onConfirm,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerButtonColor)
+                ) {
+                    Text("탈퇴", color = Color.White)
+                }
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                ) {
+                    Text("취소", color = Color.White)
+                }
             }
         }
     )
 }
 
-// ReauthenticateDialog: 구글 계정으로 재인증 다이얼로그
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReauthenticateDialog(
@@ -704,7 +757,7 @@ fun ReauthenticateDialog(
     val context = LocalContext.current
     val clientId = stringResource(id = R.string.default_web_client_id)
     val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestIdToken(clientId) // 실제 클라이언트 ID로 변경
+        .requestIdToken(clientId)
         .requestEmail()
         .build()
     val googleSignInClient = GoogleSignIn.getClient(context, gso)
@@ -722,11 +775,7 @@ fun ReauthenticateDialog(
                         if (task.isSuccessful) {
                             onReauthenticated()
                         } else {
-                            Toast.makeText(
-                                context,
-                                "재인증 실패: ${task.exception?.message}",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast.makeText(context, "재인증 실패: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                         }
                     }
             } else {
@@ -738,19 +787,34 @@ fun ReauthenticateDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("재인증 필요") },
-        text = { Text("회원 탈퇴를 위해 구글 계정으로 재인증이 필요합니다.\n재로그인 해주세요.") },
+        shape = DialogShape,
+        containerColor = DialogBackground,
+        title = { Text("재인증 필요", fontSize = 18.sp, color = Color.Black) },
+        text = { Text("회원 탈퇴를 위해 구글 계정으로 재인증이 필요합니다.\n재로그인 해주세요.", fontSize = 14.sp, color = Color.Black) },
         confirmButton = {
-            Button(onClick = {
-                googleSignInClient.signOut().addOnCompleteListener {
-                    reauthLauncher.launch(googleSignInClient.signInIntent)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = {
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            reauthLauncher.launch(googleSignInClient.signInIntent)
+                        }
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                ) {
+                    Text("재인증", color = Color.White)
                 }
-            }) {
-                Text("재인증")
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                ) {
+                    Text("취소", color = Color.White)
+                }
             }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) { Text("취소") }
         }
     )
 }
@@ -762,13 +826,11 @@ private fun performAccountDeletion(
 ) {
     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     val formattedDate = sdf.format(Date())
-    // 추가 정보를 함께 저장
     val withdrawalData = mapOf(
         "withdrawalDate" to formattedDate,
         "userId" to user.uid,
-        "email" to (user.email ?: "이메일 없음"),
+        "email" to (user.email ?: "이메일 없음")
     )
-
     FirebaseFirestore.getInstance().collection("withdrawals")
         .document(user.uid)
         .set(withdrawalData)
@@ -780,15 +842,35 @@ private fun performAccountDeletion(
                         popUpTo("login") { inclusive = true }
                     }
                 } else {
-                    Toast.makeText(
-                        context,
-                        "회원 탈퇴 실패: ${deleteTask.exception?.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(context, "회원 탈퇴 실패: ${deleteTask.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
         }
         .addOnFailureListener { e ->
             Toast.makeText(context, "탈퇴 정보 저장 실패: ${e.message}", Toast.LENGTH_SHORT).show()
         }
+}
+
+//────────────────────────────────────────────────────────────────────────────
+// Settiingitem: 설정 메뉴 항목 UI (원래 그대로 유지)
+//────────────────────────────────────────────────────────────────────────────
+@Composable
+fun Settiingitem(text: String, click: () -> Unit = {}) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
+            .padding(16.dp)
+            .clickable { click() }
+    ) {
+        Text(text = text)
+        Icon(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(start = 8.dp),
+            imageVector = Icons.Default.KeyboardArrowRight,
+            contentDescription = text,
+            tint = Color.Black
+        )
+    }
 }
