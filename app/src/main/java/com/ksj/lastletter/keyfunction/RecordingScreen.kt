@@ -7,6 +7,7 @@ import android.media.AudioRecord
 import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
@@ -60,11 +62,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.BuildConfig
+import com.ksj.lastletter.FastAPI.EmotionRequest
+import com.ksj.lastletter.FastAPI.RetrofitClient
+import com.ksj.lastletter.FastAPI.RetrofitInstance2
+import com.ksj.lastletter.FastAPI.TextRequest
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,7 +98,18 @@ enum class RecordingState {
 fun RecordingScreen(navController: NavController, contactName: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    var customDateText by remember { mutableStateOf("") }
+    var selectedEmotion by remember { mutableStateOf("") }
     var showExitDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    if (isLoading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("분석 중...") },
+            text = { CircularProgressIndicator() },
+            confirmButton = {}
+        )
+    }
 
     // 상태 관리 변수들
     var recordingState by remember { mutableStateOf(RecordingState.NOT_STARTED) }
@@ -513,7 +530,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     contentAlignment = Alignment.Center
                 ) {
                     Button(
-                        onClick = { navController.navigate("inputtextscreen") },
+                        onClick = {
+                            navController.navigate(
+                                "inputtextscreen/${Uri.encode(recognizedText)}/${
+                                    Uri.encode(
+                                        customDateText
+                                    )
+                                }/${Uri.encode(selectedEmotion)}"
+                            )
+                        },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
                         modifier = Modifier
@@ -890,7 +915,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         selectedColor = Color(0xFFFFDCA8)
                                     )
                                 )
-
                                 Text(
                                     text = "자동 저장",
                                     fontSize = 16.sp,
@@ -957,75 +981,47 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 ).format(java.util.Date())
 
                                 if (selectedOption == 0) {
-                                    // 자동 저장 옵션 선택 시
-                                    // TODO: 변환된 텍스트를 모델 서버로 전송
-                                    // 예: sendTextToModelServer(recognizedText)
-
-                                    // Firebase에 저장
-                                    val db = FirebaseFirestore.getInstance()
-                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-                                    if (userId != null) {
-                                        // 편지 데이터 생성
-                                        val letterData = hashMapOf(
-                                            "date" to currentDate,
-                                            "title" to "음성 메모",
-                                            "content" to recognizedText,
-                                            "timestamp" to com.google.firebase.Timestamp.now()
-                                        )
-
-                                        // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                                        val contactId = navController.currentBackStackEntry
-                                            ?.arguments?.getString("contactId") ?: ""
-
-                                        db.collection("users").document(userId)
-                                            .collection("Yours").document(contactId)
-                                            .collection("letters").add(letterData)
-                                            .addOnSuccessListener {
-                                                Log.d(
-                                                    "RecordingScreen",
-                                                    "Letter saved successfully"
-                                                )
-                                            }
-                                            .addOnFailureListener { e ->
-                                                Log.e("RecordingScreen", "Error saving letter", e)
-                                            }
-                                    }
+                                    showSaveDialog = false
+                                    isLoading = true
+                                    //자동저장 선택
+                                    RunModel(
+                                        coroutineScope,
+                                        recognizedText,
+                                        navController,
+                                        { customDateText = it },
+                                        { selectedEmotion = it }
+                                    )
+                                    isLoading = false
                                 } else {
-                                    // 두 번째 옵션의 경우 사용자가 입력한 제목 사용
-                                    val db = FirebaseFirestore.getInstance()
-                                    val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-                                    if (userId != null) {
-                                        // 편지 데이터 생성
-                                        val letterData = hashMapOf(
-                                            "date" to currentDate,
-                                            "title" to customDateText,
-                                            "content" to recognizedText,
-                                            "timestamp" to com.google.firebase.Timestamp.now()
-                                        )
-
-                                        // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-                                        val contactId = navController.currentBackStackEntry
-                                            ?.arguments?.getString("contactId") ?: ""
-
-                                        db.collection("users").document(userId)
-                                            .collection("Yours").document(contactId)
-                                            .collection("letters").add(letterData)
-                                            .addOnSuccessListener {
-                                                Log.d(
-                                                    "RecordingScreen",
-                                                    "Letter saved successfully"
+                                    showSaveDialog = false
+                                    coroutineScope.launch {
+                                        isLoading = true
+                                        try {
+                                            val response =
+                                                RetrofitInstance2.api.analyzeText(
+                                                    EmotionRequest(
+                                                        recognizedText
+                                                    )
                                                 )
-                                            }
-                                            .addOnFailureListener { e ->
-                                                Log.e("RecordingScreen", "Error saving letter", e)
-                                            }
+                                            selectedEmotion = response.emotion  // 서버 응답을 표시
+                                        } catch (e: Exception) {
+                                            selectedEmotion = "오류 발생: ${e.message}"
+                                        } finally {
+                                            isLoading = false
+                                            navController.navigate(
+                                                "inputtextscreen/${
+                                                    Uri.encode(
+                                                        recognizedText
+                                                    )
+                                                }/${Uri.encode(customDateText)}/${
+                                                    Uri.encode(
+                                                        selectedEmotion
+                                                    )
+                                                }"
+                                            )
+                                        }
                                     }
                                 }
-
-                                showSaveDialog = false
-                                navController.popBackStack()
                             },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFFFFDCA8),
@@ -1033,6 +1029,14 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             )
                         ) {
                             Text("저장")
+                            if (isLoading) {
+                                AlertDialog(
+                                    onDismissRequest = {},
+                                    title = { Text("분석 중...") },
+                                    text = { CircularProgressIndicator() },
+                                    confirmButton = {}
+                                )
+                            }
                         }
                     },
                     dismissButton = {
@@ -1052,3 +1056,44 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     }
 }
 
+fun RunModel(
+    coroutineScope: CoroutineScope,
+    recognizedText: String,
+    navController: NavController,
+    onCustomDateResult: (String) -> Unit,
+    onEmotionResult: (String) -> Unit
+) {
+    coroutineScope.launch {
+
+        val customDateDeferred = async {
+            try {
+                val response = RetrofitClient.apiService.generateText(TextRequest(recognizedText))
+                response.generated_text
+            } catch (e: Exception) {
+                "오류 발생: ${e.message}"
+            }
+        }
+        val emotionDeferred = async {
+            try {
+                val response = RetrofitInstance2.api.analyzeText(EmotionRequest(recognizedText))
+                response.emotion
+            } catch (e: Exception) {
+                "오류 발생: ${e.message}"
+            }
+        }
+
+        val customDate = customDateDeferred.await()
+        val selectedEmotion = emotionDeferred.await()
+
+        onCustomDateResult(customDate)
+        onEmotionResult(selectedEmotion)
+
+        navController.navigate(
+            "inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDate)}/${
+                Uri.encode(
+                    selectedEmotion
+                )
+            }"
+        )
+    }
+}
