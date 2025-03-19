@@ -1,6 +1,5 @@
 package com.ksj.lastletter.login
 
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -50,35 +48,32 @@ import com.ksj.lastletter.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PhoneTermScreen(navController: NavController) {
+fun PhoneTermScreen(
+    navController: NavController,
+    preFilledPhone: String = ""
+) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
 
-    // 리소스에 저장된 약관 및 개인정보 처리방침 내용
     val tosText = stringResource(id = R.string.PRIVACY_TITLE)
     val privacyText = stringResource(id = R.string.PRIVACY_CONTENT)
 
-    // 전화번호 입력 상태 (최대 8자리)
-    var phoneNumberInput by remember { mutableStateOf("") }
+    // preFilledPhone가 비어있지 않으면 해당 값(8자리)을 사용, 그렇지 않으면 사용자가 입력하도록 함
+    var phoneNumberInput by remember { mutableStateOf(preFilledPhone) }
     val isPhoneValid = phoneNumberInput.length == 8
 
-    // 약관 체크 상태
-    var termsChecked by remember { mutableStateOf(false) }       // 이용약관 (필수)
-    var privacyChecked by remember { mutableStateOf(false) }     // 개인정보 처리방침 (필수)
-    var marketingChecked by remember { mutableStateOf(false) }   // 마케팅 (선택)
-    var ageChecked by remember { mutableStateOf(false) }         // 만 14세 이상 (필수)
+    var termsChecked by remember { mutableStateOf(false) }
+    var privacyChecked by remember { mutableStateOf(false) }
+    var marketingChecked by remember { mutableStateOf(false) }
+    var ageChecked by remember { mutableStateOf(false) }
 
-    // "내용 보기" 팝업 상태
     var showTosDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
 
-    // 필수 항목 체크 여부
     val isAllRequiredChecked = termsChecked && privacyChecked && ageChecked
-    // "다음" 버튼 활성화 조건
     val isNextEnabled = isPhoneValid && isAllRequiredChecked
 
-    // 구글 로그인 관련 런처
     val clientId = stringResource(id = R.string.default_web_client_id)
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -91,7 +86,6 @@ fun PhoneTermScreen(navController: NavController) {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
                 auth.signInWithCredential(credential).addOnCompleteListener { task ->
                     if (task.isSuccessful) {
-                        // 로그인 성공 후 Firestore에 전화번호 저장 후 DailyQuestionScreen으로 이동
                         val uid = auth.currentUser?.uid
                         if (uid != null) {
                             firestore.collection("users")
@@ -144,13 +138,17 @@ fun PhoneTermScreen(navController: NavController) {
             OutlinedTextField(
                 value = formatPhoneNumber(phoneNumberInput),
                 onValueChange = { newValue ->
-                    val digits = newValue.filter { it.isDigit() }
-                    val phonePart = if (digits.startsWith("010")) digits.drop(3) else digits
-                    phoneNumberInput = phonePart.take(8)
+                    // preFilledPhone가 있으면 수정할 수 없도록 함
+                    if (preFilledPhone.isEmpty()) {
+                        val digits = newValue.filter { it.isDigit() }
+                        val phonePart = if (digits.startsWith("010")) digits.drop(3) else digits
+                        phoneNumberInput = phonePart.take(8)
+                    }
                 },
                 label = { Text("휴대폰 번호") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
+                enabled = preFilledPhone.isEmpty(),
                 modifier = Modifier.fillMaxWidth()
             )
             CheckItemWithContent(
@@ -181,7 +179,6 @@ fun PhoneTermScreen(navController: NavController) {
             Button(
                 onClick = {
                     if (isNextEnabled) {
-                        // 전화번호를 Firestore에 저장하고 DailyQuestionScreen으로 이동
                         val uid = auth.currentUser?.uid
                         if (uid != null) {
                             firestore.collection("users")
@@ -266,9 +263,6 @@ fun PhoneTermScreen(navController: NavController) {
     }
 }
 
-/**
- * "내용 보기"가 포함된 체크 항목
- */
 @Composable
 fun CheckItemWithContent(
     text: String,
@@ -289,9 +283,6 @@ fun CheckItemWithContent(
     }
 }
 
-/**
- * "내용 보기"가 없는 일반 체크 항목
- */
 @Composable
 fun CheckItem(
     text: String,
@@ -308,9 +299,6 @@ fun CheckItem(
     }
 }
 
-/**
- * 입력된 전화번호(최대 8자리)를 "010-xxxx-xxxx" 형태로 반환
- */
 fun formatPhoneNumber(input: String): String {
     return when {
         input.length <= 4 -> "010-$input"
