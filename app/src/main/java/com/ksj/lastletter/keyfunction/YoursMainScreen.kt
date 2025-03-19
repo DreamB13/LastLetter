@@ -1,5 +1,6 @@
 package com.ksj.lastletter.keyfunction
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,21 +14,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +58,8 @@ import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
 import kotlinx.coroutines.launch
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YoursMainScreen(navController: NavController) {
     var showDialog by remember { mutableStateOf(false) }
@@ -76,26 +88,48 @@ fun YoursMainScreen(navController: NavController) {
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFFFFBF5)
-    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFFDFBF4)),
+                // 왼쪽 아이콘 (navigationIcon 자리)
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowLeft,
+                            contentDescription = "뒤로가기",
+                            tint = Color.Black
+                        )
+                    }
+                },
+                title = {
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "남은 너에게",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                        )
+                    }
+                },
+                // 오른쪽 아이콘 (actions 자리)
+                actions = {
+                    Icon(
+                        imageVector = Icons.Filled.Face,
+                        contentDescription = "편지 받을 사람",
+                    )
+                }
+            )
+        }
+        // 오른쪽 아이콘 (actions 자리
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(innerPadding),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "남은 너에게",
-                color = Color.Black,
-                modifier = Modifier.align(Alignment.Start)
-            )
             Spacer(modifier = Modifier.height(32.dp))
-            Button(onClick = {navController.navigate("recording/1/1")}) {
-                Text("바로가기")
-            }
             contacts.forEach { documentContact ->
                 InfoCard(
                     text = documentContact.contact.name,
@@ -193,7 +227,8 @@ fun YoursMainScreen(navController: NavController) {
                             val contactRepository = ContactRepository()
                             val newContact = Contact(name, phoneNumber, relationship)
                             contactRepository.addContact(newContact)
-                            val updatedContacts = contactRepository.getContactsWithCoroutines()
+                            val updatedContacts =
+                                contactRepository.getContactsWithCoroutines()
                             contacts.clear()
                             contacts.addAll(updatedContacts)
                             showDialog = false
@@ -232,7 +267,10 @@ fun RelationshipDropdown(
             label = { Text("상대방과의 관계") },
             trailingIcon = {
                 IconButton(onClick = { expanded = !expanded }) {
-                    Icon(imageVector = Icons.Default.ArrowDropDown, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null
+                    )
                 }
             },
             modifier = Modifier
@@ -266,7 +304,12 @@ fun InfoCard(text: String, modifier: Modifier = Modifier) {
             .background(color = Color(0xFFFFF4E6), shape = RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.CenterEnd
     ) {
-        Text(text = text, fontSize = 16.sp, color = Color.Black, modifier = Modifier.padding(16.dp))
+        Text(
+            text = text,
+            fontSize = 16.sp,
+            color = Color.Black,
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
 

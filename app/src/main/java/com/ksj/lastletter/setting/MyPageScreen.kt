@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -87,16 +89,30 @@ fun MyPageScreen(navController: NavController) {
     }
 
     // 배경색
-    val backgroundColor = Color(0xFFFFF5E9)
+    val backgroundColor = Color(0xFFFDFBF4)
 
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowLeft,
+                            contentDescription = "뒤로가기",
+                            tint = Color.Black
+                        )
+                    }
+                },
                 title = {
-                    Text(text = "나의 마지막 편지", color = Color.Black)
+                    Text(
+                        text = "나의 마지막 편지", color = Color.Black,
+                        fontWeight = FontWeight.Bold
+                    )
                 },
                 actions = {
-                    IconButton(onClick = { /* 알림 아이콘 클릭 처리 */ }) {
+                    IconButton(onClick = {
+                        Toast.makeText(context, "알림 기능은 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                    }) {
                         Icon(
                             imageVector = Icons.Filled.Notifications,
                             contentDescription = "알림",
@@ -168,7 +184,8 @@ fun MyPageScreen(navController: NavController) {
                                 if (currentAttendance == totalAttendance) {
                                     // 0으로 초기화
                                     currentAttendance = 0
-                                    Toast.makeText(context, "편지지 한장을 받았습니다.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "편지지 한장을 받았습니다.", Toast.LENGTH_SHORT)
+                                        .show()
                                 }
 
                                 isAttendanceComplete = true
@@ -308,7 +325,7 @@ fun MenuItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFFFFF5E9), shape = RoundedCornerShape(20.dp))
+            .background(Color(0xFFFDFBF4), shape = RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -328,7 +345,7 @@ fun InfoCard(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
-            .background(Color(0xFFFFF4E6), shape = MaterialTheme.shapes.medium)
+            .background(Color(0xFFFDFBF4), shape = MaterialTheme.shapes.medium)
             .padding(16.dp),
         contentAlignment = Alignment.CenterStart
     ) {
