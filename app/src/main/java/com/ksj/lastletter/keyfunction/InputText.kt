@@ -17,8 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -56,14 +58,12 @@ fun InputTextScreen(navController: NavController) {
     var letterText by remember { mutableStateOf("") }
     var maxTextLength by remember { mutableIntStateOf(500) }
     var selectedEmotion by remember { mutableStateOf("기쁨") }
+    var isLoading by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
         Toast.makeText(context, "글자 수를 초과하셨습니다.", Toast.LENGTH_SHORT).show()
     }
-
-
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFFFFBF5)
@@ -164,7 +164,7 @@ fun InputTextScreen(navController: NavController) {
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(4f)
+                    .weight(5f)
             ) {
                 Button(
                     onClick = {/*광고 띄우면서 최대 글자수 1000으로 변경*/
@@ -191,12 +191,15 @@ fun InputTextScreen(navController: NavController) {
                 Button(
                     onClick = {
                         coroutineScope.launch {
+                            isLoading = true
                             try {
                                 val response =
                                     RetrofitClient.apiService.generateText(TextRequest(letterText))
                                 titleText = response.generated_text  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 titleText = "오류 발생: ${e.message}"
+                            }finally {
+                                isLoading = false
                             }
                         }
                     },
@@ -211,12 +214,15 @@ fun InputTextScreen(navController: NavController) {
                 Button(
                     onClick = {
                         coroutineScope.launch {
+                            isLoading = true
                             try {
                                 val response =
                                     RetrofitInstance2.api.analyzeText(EmotionRequest(letterText))
                                 selectedEmotion = response.emotion  // 서버 응답을 표시
                             } catch (e: Exception) {
                                 selectedEmotion = "오류 발생: ${e.message}"
+                            }finally {
+                                isLoading = false
                             }
                         }
                     },
@@ -232,9 +238,17 @@ fun InputTextScreen(navController: NavController) {
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(5f)
+                    .weight(4f)
             )
         }
+    }
+    if (isLoading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("분석 중...") },
+            text = { CircularProgressIndicator() },
+            confirmButton = {}
+        )
     }
 }
 
@@ -306,3 +320,4 @@ fun InputTextScreenPreview() {
     val navController = rememberNavController() // NavController 생성
     InputTextScreen(navController = navController) // Preview에서 InputTextScreen 호출
 }
+
