@@ -32,6 +32,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+// 편지 데이터를 저장할 데이터 클래스
+data class LetterInfo(
+    val date: String,
+    val title: String,
+    val docId: String,
+    val emotion: String = "중립" // 기본값은 중립으로 설정
+)
+
 @Composable
 fun YoursContextScreen(contactId: String, navController: NavController) {
     val contact = remember { mutableStateOf<Contact?>(null) }
@@ -113,11 +121,9 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-// 편지 데이터 구조 변경 - 문서 ID를 포함하도록
+// 편지 데이터 구조 변경 - emotion도 포함하도록
             var letterData by remember {
-                mutableStateOf<List<Triple<String, String, String>>>(
-                    emptyList()
-                )
+                mutableStateOf<List<LetterInfo>>(emptyList())
             }
 
 // Firebase에서 데이터 불러오기
@@ -127,7 +133,6 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                         // Firebase에서 현재 연락처(contactId)의 편지 목록 가져오기
                         val db = FirebaseFirestore.getInstance()
                         val userId = FirebaseAuth.getInstance().currentUser?.uid
-
                         if (userId != null) {
                             val lettersRef = db.collection("users").document(userId)
                                 .collection("Yours").document(contactId)
@@ -141,14 +146,14 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                 lettersRef.get().await()
                             }
 
-                            val fetchedLetters = mutableListOf<Triple<String, String, String>>()
+                            val fetchedLetters = mutableListOf<LetterInfo>()
                             for (doc in result) {
                                 val date = doc.getString("date") ?: ""
                                 val title = doc.getString("title") ?: ""
                                 val docId = doc.id
-                                fetchedLetters.add(Triple(date, title, docId))
+                                val emotion = doc.getString("emotion") ?: "중립" // emotion 정보 추가로 불러오기
+                                fetchedLetters.add(LetterInfo(date, title, docId, emotion))
                             }
-
                             letterData = fetchedLetters
                         }
                     } catch (e: Exception) {
@@ -165,13 +170,14 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     color = Color.Gray
                 )
             } else {
-                letterData.forEach { (date, title, docId) ->
+                // 수정된 코드
+                letterData.forEach { letterInfo ->
                     // 카드에 클릭 기능 추가
                     Box(modifier = Modifier.clickable {
                         // InputText 화면으로 이동
-                        navController.navigate("inputtextscreen/${Uri.encode(docId)}/${Uri.encode(contactId)}/${Uri.encode("fromfirebase")}")
+                        navController.navigate("inputtextscreen/${Uri.encode(letterInfo.docId)}/${Uri.encode(contactId)}/${Uri.encode("fromfirebase")}")
                     }) {
-                        ContextInfoCard(date, title)
+                        ContextInfoCard(letterInfo.date, letterInfo.title, letterInfo.emotion)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -261,18 +267,20 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
 }
 
 @Composable
-fun ContextInfoCard(date: String, text: String) {
+fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
             .background(
-                color = when (date) {
-                    "1월 7일" -> Color(0xFFFFF4E6)
-                    "12월 4일" -> Color(0xFFFFE6E6)
-                    "12월 2일" -> Color(0xFFE6FFE6)
-                    "11월 26일" -> Color(0xFFE6E6FF)
-                    else -> Color(0xFFFFE6FF)
+                color = when (emotion) {
+                    "기쁨" -> Color(0xFFFFF5E9)
+                    "놀라움" -> Color(0xFFE9FFE9)
+                    "사랑" -> Color(0xFFFFE9E9)
+                    "분노" -> Color(0xFFFFE9FE)
+                    "슬픔" -> Color(0xFFE9EDFF)
+                    "중립" -> Color(0xFFF7FFC8)
+                    else -> Color(0xFFF7FFC8) // 기본값은 중립 색상
                 },
                 shape = RoundedCornerShape(12.dp)
             ),
@@ -284,6 +292,7 @@ fun ContextInfoCard(date: String, text: String) {
             color = Color.Black,
             modifier = Modifier.padding(start = 16.dp)
         )
+
         Text(
             text = text,
             color = Color.Black,
