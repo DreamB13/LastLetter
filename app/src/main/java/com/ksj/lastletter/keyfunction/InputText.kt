@@ -18,10 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -280,7 +278,6 @@ fun InputTextScreen(
                                         navController.popBackStack()
                                     }
                                 }
-
                                 .addOnFailureListener { e ->
                                     Log.e("InputTextScreen", "Error saving letter", e)
                                     // 에러 처리
