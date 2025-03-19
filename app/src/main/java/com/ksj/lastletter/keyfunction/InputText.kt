@@ -56,7 +56,7 @@ import com.ksj.lastletter.FastAPI.TextRequest
 import kotlinx.coroutines.launch
 
 @Composable
-fun InputTextScreen(navController: NavController, recognizedText: String, customDateText: String) {
+fun InputTextScreen(navController: NavController, recognizedText: String, customDateText: String,currentDate:String) {
     var titleText by remember { mutableStateOf(customDateText) }
     var maxTextLength by remember { mutableIntStateOf(500) }
     var selectedEmotion by remember { mutableStateOf("기쁨") }
@@ -130,7 +130,7 @@ fun InputTextScreen(navController: NavController, recognizedText: String, custom
                     .weight(0.6f)
             ) {
                 Text(
-                    "작성일 : 날짜 표시하는 함수",
+                    "작성일 : $currentDate",
                     color = Color(0xffAFADAD),
                     modifier = Modifier
                         .padding(0.dp)
