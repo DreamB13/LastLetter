@@ -183,35 +183,35 @@ fun InputTextScreen(navController: NavController, recognizedText: String, custom
                 }
                 Button(
                     onClick = {/*저장 기능인데 감정 저장도 추가해줘야됨*/
-//                        val db = FirebaseFirestore.getInstance()
-//                        val userId = FirebaseAuth.getInstance().currentUser?.uid
-//
-//                        if (userId != null) {
-//                            // 편지 데이터 생성
-//                            val letterData = hashMapOf(
-//                                "date" to currentDate,
-//                                "title" to customDateText,
-//                                "content" to recognizedText,
-//                                "timestamp" to com.google.firebase.Timestamp.now()
-//                            )
-//
-//                            // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
-//                            val contactId = navController.currentBackStackEntry
-//                                ?.arguments?.getString("contactId") ?: ""
-//
-//                            db.collection("users").document(userId)
-//                                .collection("Yours").document(contactId)
-//                                .collection("letters").add(letterData)
-//                                .addOnSuccessListener {
-//                                    Log.d(
-//                                        "RecordingScreen",
-//                                        "Letter saved successfully"
-//                                    )
-//                                }
-//                                .addOnFailureListener { e ->
-//                                    Log.e("RecordingScreen", "Error saving letter", e)
-//                                }
-//                        }
+                        val db = FirebaseFirestore.getInstance()
+                        val userId = FirebaseAuth.getInstance().currentUser?.uid
+
+                        if (userId != null) {
+                            // 편지 데이터 생성
+                            val letterData = hashMapOf(
+                                "date" to currentDate,
+                                "title" to customDateText,
+                                "content" to recognizedText,
+                                "timestamp" to com.google.firebase.Timestamp.now()
+                            )
+
+                            // 저장 경로: users/{userId}/Yours/{contactId}/letters/{letterId}
+                            val contactId = navController.currentBackStackEntry
+                                ?.arguments?.getString("contactId") ?: ""
+
+                            db.collection("users").document(userId)
+                                .collection("Yours").document(contactId)
+                                .collection("letters").add(letterData)
+                                .addOnSuccessListener {
+                                    Log.d(
+                                        "RecordingScreen",
+                                        "Letter saved successfully"
+                                    )
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("RecordingScreen", "Error saving letter", e)
+                                }
+                        }
                     },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
