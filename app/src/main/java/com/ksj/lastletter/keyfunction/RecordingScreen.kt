@@ -113,6 +113,12 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     var timerJob by remember { mutableStateOf<Job?>(null) }
     var waveformJob by remember { mutableStateOf<Job?>(null) }
 
+    //현재 날짜
+    val currentDate = java.text.SimpleDateFormat(
+        "MM월 dd일",
+        java.util.Locale.getDefault()
+    ).format(java.util.Date())
+
     // Google STT API Key
     val googleAPIKey = try {
         BuildConfig.GOOGLE_API_KEY
@@ -517,7 +523,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                 ) {
                     Button(
                         onClick = {
-                            navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}")
+                            navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}/${Uri.encode(currentDate)}")
                                   },
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
@@ -956,19 +962,13 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     confirmButton = {
                         Button(
                             onClick = {
-                                // 현재 날짜 가져오기
-                                val currentDate = java.text.SimpleDateFormat(
-                                    "MM월 dd일",
-                                    java.util.Locale.getDefault()
-                                ).format(java.util.Date())
-
                                 if (selectedOption == 0) {
                                     // 자동 저장 옵션 선택 시
                                     // TODO: 변환된 텍스트를 모델 서버로 전송
                                     // 예: sendTextToModelServer(recognizedText)
-                                    navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}")
+                                    navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}/${Uri.encode(currentDate)}")
                                 } else {
-                                    navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}")
+                                    navController.navigate("inputtextscreen/${Uri.encode(recognizedText)}/${Uri.encode(customDateText)}/${Uri.encode(currentDate)}")
                                     showSaveDialog = false
                                 }
                             },
