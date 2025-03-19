@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,7 +23,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -177,48 +180,98 @@ fun BottomNavigationBar(navController: NavController) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 4.dp
-    ) {
+        containerColor = Color(0xFFFDFBF4),
+        tonalElevation = 4.dp,
+
+        ) {
         NavigationBarItem(
             selected = currentRoute == "dailyQuestion",
             onClick = { navController.navigate("dailyQuestion") },
             icon = {
-                Icon(
-                    imageVector = Icons.Filled.Edit,
-                    contentDescription = "홈"
-                )
-            }
+                if (currentRoute == "dailyQuestion") {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_write),
+                        contentDescription = "홈",
+                        tint = Color(0xFF111111)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_write),
+                        contentDescription = "홈",
+                        tint = Color(0xFF797878)
+                    )
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = Color.Transparent, // 인디케이터를 투명색으로
+            )
         )
         NavigationBarItem(
             selected = currentRoute == "yoursMain",
             onClick = { navController.navigate("yoursMain") },
             icon = {
-                Icon(
-                    imageVector = Icons.Filled.Email,
-                    contentDescription = "편지쓰기"
-                )
-            }
+                if (currentRoute == "yoursMain") {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_letter),
+                        contentDescription = "편지쓰기",
+                        tint = Color(0xFF111111)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_letter),
+                        contentDescription = "편지쓰기",
+                        tint = Color(0xFF797878)
+                    )
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = Color.Transparent, // 인디케이터를 투명색으로
+            )
         )
         NavigationBarItem(
             selected = currentRoute == "dailyQuestionList",
             onClick = { navController.navigate("dailyQuestionList") },
             icon = {
-                Icon(
-                    imageVector = Icons.Filled.AccountBox,
-                    contentDescription = "일일질문목록"
-                )
-            }
+                if (currentRoute == "dailyQuestionList") {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_list),
+                        contentDescription = "일일질문목록",
+                        tint = Color(0xFF111111)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_list),
+                        contentDescription = "일일질문목록",
+                        tint = Color(0xFF797878)
+
+                    )
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = Color.Transparent, // 인디케이터를 투명색으로
+            )
         )
         NavigationBarItem(
             selected = currentRoute == "myPage",
             onClick = { navController.navigate("myPage") },
             icon = {
-                Icon(
-                    imageVector = Icons.Filled.ShoppingCart,
-                    contentDescription = "우리의 돈줄"
-                )
-            }
-        )
+                if (currentRoute == "myPage") {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_cart),
+                        contentDescription = "마이페이지",
+                        tint = Color(0xFF111111)
+                    )
+                } else {
+                    Icon(
+                        painter = painterResource(R.drawable.icon_cart),
+                        contentDescription = "마이페이지",
+                        tint = Color(0xFF797878)
+                    )
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = Color.Transparent, // 인디케이터를 투명색으로
+            ))
+
     }
 }

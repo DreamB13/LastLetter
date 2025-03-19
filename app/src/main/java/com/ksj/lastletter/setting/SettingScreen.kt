@@ -233,11 +233,16 @@ fun SettingsScreen(navController: NavController) {
             // 설정 메뉴 항목들
             Column(modifier = Modifier.fillMaxWidth()) {
                 Settiingitem("글자 크기 변경") { navController.navigate("textSizeSetting") }
+                Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("전화번호 변경") { showChangePhoneDialog = true }
                 Spacer(modifier = Modifier.height(8.dp))
-                Settiingitem("문의하기") { /* 문의하기 처리 */ }
+                Settiingitem("문의하기") {
+                    Toast.makeText(context, "문의하기 기능은 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                }
                 Spacer(modifier = Modifier.height(8.dp))
-                Settiingitem("제안하기") { /* 제안하기 처리 */ }
+                Settiingitem("제안하기") {
+                    Toast.makeText(context, "제안하기 기능은 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Settiingitem("로그아웃") {
                     FirebaseAuth.getInstance().signOut()
