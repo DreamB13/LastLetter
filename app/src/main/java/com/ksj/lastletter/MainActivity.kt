@@ -1,5 +1,6 @@
 package com.ksj.lastletter
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -104,7 +105,7 @@ class MainActivity : ComponentActivity() {
                             })
                         ) { backStackEntry ->
                             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
-                            YoursContextScreen(contactId= contactId, navController = navController)
+                            YoursContextScreen(contactId = contactId, navController = navController)
                         }
                         composable(
                             route = "recording/{contactId}/{contactName}",
@@ -113,7 +114,8 @@ class MainActivity : ComponentActivity() {
                                 navArgument("contactName") { type = NavType.StringType }
                             )
                         ) { backStackEntry ->
-                            val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
+                            val contactName =
+                                backStackEntry.arguments?.getString("contactName") ?: ""
                             RecordingScreen(navController, contactName)
                         }
                         composable("settings") {
@@ -144,8 +146,14 @@ class MainActivity : ComponentActivity() {
                         composable("phoneTerm") {
                             PhoneTermScreen(navController = navController)
                         }
-                        composable("inputtextscreen") {
-                            InputTextScreen(navController)
+                        composable("inputtextscreen/{recognizedText}/{customDateText}") { backStackEntry ->
+                            val recognizedText =
+                                backStackEntry.arguments?.getString("recognizedText")
+                                    ?.let { Uri.decode(it) } ?: ""
+                            val customDateText =
+                                backStackEntry.arguments?.getString("customDateText")
+                                    ?.let { Uri.decode(it) } ?: ""
+                            InputTextScreen(navController, recognizedText, customDateText)
                         }
                     }
                 }
