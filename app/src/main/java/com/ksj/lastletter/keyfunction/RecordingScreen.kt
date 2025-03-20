@@ -98,8 +98,8 @@ enum class RecordingState {
 fun RecordingScreen(navController: NavController, contactName: String) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var customDateText by remember { mutableStateOf("") }
-    var selectedEmotion by remember { mutableStateOf("") }
+    val customDateText by remember { mutableStateOf("") }
+    var selectedEmotion by remember { mutableStateOf("기쁨") }
     var showExitDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     if (isLoading) {
