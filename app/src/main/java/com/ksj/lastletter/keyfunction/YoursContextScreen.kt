@@ -606,6 +606,7 @@ fun EditContactDialog(
         }
     )
 
+
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
