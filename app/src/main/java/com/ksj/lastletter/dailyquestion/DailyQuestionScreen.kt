@@ -91,6 +91,7 @@ fun DailyQuestionScreen(navController: NavController) {
     val contacts: List<DocumentContact> = appViewModel.contacts.value
 
     val coroutineScope = rememberCoroutineScope()
+    var isEdited by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     if (isLoading) {
         AlertDialog(
@@ -258,29 +259,31 @@ fun DailyQuestionScreen(navController: NavController) {
                 Button(
                     onClick = {
                         if (uid != null) {
-                            coroutineScope.launch {
-                                isLoading = true
-                                try {
-                                    val response =
-                                        RetrofitInstance2.api.analyzeText(
-                                            EmotionRequest(
-                                                answer.value
+                            if(!isEdited) {
+                                coroutineScope.launch {
+                                    isLoading = true
+                                    try {
+                                        val response =
+                                            RetrofitInstance2.api.analyzeText(
+                                                EmotionRequest(
+                                                    answer.value
+                                                )
                                             )
-                                        )
-                                    selectedEmotion = response.emotion  // 서버 응답을 표시
-                                } catch (e: Exception) {
-                                    selectedEmotion = "오류 발생: ${e.message}"
-                                } finally {
-                                    selectedEmotion = when (selectedEmotion) {
-                                        "기쁨" -> "😊"
-                                        "놀라움" -> "😲"
-                                        "사랑" -> "❤️"
-                                        "분노" -> "😡"
-                                        "슬픔" -> "😢"
-                                        "중립" -> "😐"
-                                        else -> selectedEmotion // 기본적으로 기존 값을 유지
+                                        selectedEmotion = response.emotion  // 서버 응답을 표시
+                                    } catch (e: Exception) {
+                                        selectedEmotion = "오류 발생: ${e.message}"
+                                    } finally {
+                                        selectedEmotion = when (selectedEmotion) {
+                                            "기쁨" -> "😊"
+                                            "놀라움" -> "😲"
+                                            "사랑" -> "❤️"
+                                            "분노" -> "😡"
+                                            "슬픔" -> "😢"
+                                            "중립" -> "😐"
+                                            else -> selectedEmotion // 기본적으로 기존 값을 유지
+                                        }
+                                        isLoading = false
                                     }
-                                    isLoading = false
                                 }
                             }
                             val dailyQuestionData = hashMapOf(
@@ -329,6 +332,7 @@ fun DailyQuestionScreen(navController: NavController) {
                     onClick = {
                         // 광고 시청 후 수정하기 (예시로 바로 수정 모드로 전환)
                         isEditing = true
+                        isEdited = true
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {

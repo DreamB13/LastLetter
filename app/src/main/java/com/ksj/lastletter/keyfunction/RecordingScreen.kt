@@ -975,7 +975,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     confirmButton = {
                         Button(
                             onClick = {
-
                                 if (selectedOption == 0) {
                                     showSaveDialog = false
                                     isLoading = true

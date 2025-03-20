@@ -61,13 +61,12 @@ fun InputTextScreen(
     customDateText: String,
     selectedEmotion: String
 ) {
-    var titleText by remember { mutableStateOf("") }
+    var titleText by remember { mutableStateOf(customDateText) }
     var maxTextLength by remember { mutableIntStateOf(500) }
-    var letterText by remember { mutableStateOf("") }
+    var letterText by remember { mutableStateOf(recognizedText) }
     var isLoading by remember { mutableStateOf(false) }
-    var emotion by remember { mutableStateOf("") }
+    var emotion by remember { mutableStateOf(selectedEmotion) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     if (letterText.length == maxTextLength) {
         Toast.makeText(context, "글자 수를 초과하셨습니다.", Toast.LENGTH_SHORT).show()
     }
@@ -114,13 +113,7 @@ fun InputTextScreen(
                 isLoading = false
             }
         }
-    } else {
-        // 기존 방식대로 파라미터에서 초기화
-        titleText = customDateText
-        letterText = recognizedText
-        emotion = selectedEmotion
     }
-
 
     Surface(
         modifier = Modifier.fillMaxSize(),
