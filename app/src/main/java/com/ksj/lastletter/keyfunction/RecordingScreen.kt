@@ -8,9 +8,11 @@ import android.media.MediaPlayer
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Build.VERSION.SDK_INT
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +56,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,11 +66,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
+import coil.ImageLoader
+import coil.compose.rememberAsyncImagePainter
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import com.ksj.lastletter.BuildConfig
 import com.ksj.lastletter.FastAPI.EmotionRequest
 import com.ksj.lastletter.FastAPI.RetrofitClient
 import com.ksj.lastletter.FastAPI.RetrofitInstance2
 import com.ksj.lastletter.FastAPI.TextRequest
+import com.ksj.lastletter.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -100,6 +109,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
     val coroutineScope = rememberCoroutineScope()
     val customDateText by remember { mutableStateOf("") }
     var selectedEmotion by remember { mutableStateOf("기쁨") }
+    var isAnimating by remember { mutableStateOf(false) }
+    var runRecord by remember { mutableStateOf(false) }
+    LaunchedEffect(isAnimating) {
+        if (isAnimating) {
+            delay(4500)  // 애니메이션 길이에 맞게 조정 (1초)
+            isAnimating = false  // 애니메이션이 끝나면 정지
+            runRecord = true
+        }
+    }
     var showExitDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     if (isLoading) {
@@ -344,6 +362,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
         }
     }
 
+    val imageLoader = ImageLoader.Builder(context)
+        .components {
+            if (SDK_INT >= 28) {
+                add(ImageDecoderDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }.build()
+
     // 메인 UI
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -530,6 +557,79 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(20.dp)) {
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                if (isAnimating) {
+                                    // 애니메이션을 시작하려면 gif를 사용
+                                    R.drawable.lettergif
+                                } else {
+                                    // 애니메이션이 끝나면 정지된 이미지를 사용
+                                    R.drawable.lettergif_static  // 정적인 이미지 파일을 사용
+                                },
+                                imageLoader = imageLoader
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp))
+                                .weight(7f)
+                                .size(120.dp)
+                                .padding(bottom = 24.dp)
+                                .clickable {
+                                    if (!isAnimating) {
+                                        isAnimating = true
+                                        coroutineScope.launch {
+                                            delay(3000)
+                                            when {
+                                                ContextCompat.checkSelfPermission(
+                                                    context,
+                                                    Manifest.permission.RECORD_AUDIO
+                                                ) == PackageManager.PERMISSION_GRANTED -> {
+                                                    // 권한이 있으면 녹음 시작
+                                                    startRecording(context, audioFilePath,
+                                                        onRecorderPrepared = { recorder ->
+                                                            audioRecorder = recorder
+                                                            recordingState =
+                                                                RecordingState.RECORDING
+                                                            // 타이머 시작
+                                                            timerJob =
+                                                                startTimer(coroutineScope) { newTime ->
+                                                                    timerSeconds = newTime
+                                                                    formattedTime =
+                                                                        formatTime(newTime)
+                                                                }
+                                                            // 파형 애니메이션 시작
+                                                            waveformJob =
+                                                                animateWaveform(coroutineScope) { newData ->
+                                                                    waveformData = newData
+                                                                }
+                                                        }
+                                                    )
+                                                }
+
+                                                else -> {
+                                                    // 권한이 없으면 요청
+                                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                            contentScale = ContentScale.Crop
+                        )
+                        // 안내 텍스트 변경
+                        Text(
+                            text = "클릭하면 녹음 시작",
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp,
+                            color = Color.Black,
+                            modifier = Modifier.padding(bottom = 32.dp)
+                                .weight(1f)
+                        )
+                        // 마이크 버튼 제거됨
+                    }
                     Button(
                         onClick = {
                             navController.navigate(
@@ -547,58 +647,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     ) {
                         Text("텍스트로 입력하기")
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // 봉투 아이콘을 클릭 가능하게 수정
-                        EnvelopeIcon(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .padding(bottom = 24.dp)
-                                .clickable {
-                                    // 마이크 권한 확인
-                                    when {
-                                        ContextCompat.checkSelfPermission(
-                                            context,
-                                            Manifest.permission.RECORD_AUDIO
-                                        ) == PackageManager.PERMISSION_GRANTED -> {
-                                            // 권한이 있으면 녹음 시작
-                                            startRecording(context, audioFilePath,
-                                                onRecorderPrepared = { recorder ->
-                                                    audioRecorder = recorder
-                                                    recordingState = RecordingState.RECORDING
-                                                    // 타이머 시작
-                                                    timerJob =
-                                                        startTimer(coroutineScope) { newTime ->
-                                                            timerSeconds = newTime
-                                                            formattedTime = formatTime(newTime)
-                                                        }
-                                                    // 파형 애니메이션 시작
-                                                    waveformJob =
-                                                        animateWaveform(coroutineScope) { newData ->
-                                                            waveformData = newData
-                                                        }
-                                                }
-                                            )
-                                        }
 
-                                        else -> {
-                                            // 권한이 없으면 요청
-                                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                        }
-                                    }
-                                }
-                        )
-
-                        // 안내 텍스트 변경
-                        Text(
-                            text = "클릭하면 녹음 시작",
-                            textAlign = TextAlign.Center,
-                            fontSize = 16.sp,
-                            color = Color.Black,
-                            modifier = Modifier.padding(bottom = 32.dp)
-                        )
-
-                        // 마이크 버튼 제거됨
-                    }
                 }
             } else if (recordingState == RecordingState.RECORDING || recordingState == RecordingState.PAUSED) {
                 // 녹음 중 화면
