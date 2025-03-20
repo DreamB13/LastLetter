@@ -140,7 +140,7 @@ fun InputTextScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(1.5f)
+                    .weight(3f)
             ) {
                 TextField(
                     value = titleText,
