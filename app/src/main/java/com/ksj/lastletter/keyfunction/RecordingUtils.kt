@@ -39,8 +39,39 @@ private val channelConfig = AudioFormat.CHANNEL_IN_MONO
 private val audioFormat = AudioFormat.ENCODING_PCM_16BIT
 
 // 오디오 샘플 데이터를 저장할 버퍼 추가
-private val waveformBuffer = mutableListOf<Float>()
+private val waveformBuffer = ArrayDeque<Float>(300) // 더 많은 데이터 포인트 저장
 private val waveformLock = Any() // 스레드 안전을 위한 락 객체
+
+// 오디오 샘플을 파형 데이터로 변환하는 함수 수정
+private fun byteToAmplitude(audioData: ByteArray, bufferSize: Int): List<Float> {
+    val result = mutableListOf<Float>()
+
+    // 새로운 데이터 포인트만 추출 (5개)
+    val segmentSize = bufferSize / 10
+
+    for (i in 0 until 5) { // 한 번에 5개의 새 데이터 포인트만 추가
+        var sum = 0.0
+        var count = 0
+
+        val startIdx = i * segmentSize
+        val endIdx = minOf((i + 1) * segmentSize, bufferSize)
+
+        for (j in startIdx until endIdx step 2) {
+            if (j + 1 < bufferSize) {
+                val sample = (audioData[j].toInt() and 0xFF) or ((audioData[j + 1].toInt() and 0xFF) shl 8)
+                val signedSample = if (sample > 32767) sample - 65536 else sample
+                val amplitude = 0.1f + (Math.abs(signedSample) / 32768.0) * 0.8
+                sum += amplitude
+                count++
+            }
+        }
+
+        val avgAmplitude = if (count > 0) sum / count else 0.1
+        result.add(avgAmplitude.toFloat())
+    }
+
+    return result
+}
 
 fun startRecording(
     context: Context,
@@ -108,8 +139,12 @@ fun startRecording(
                         // 오디오 데이터에서 파형 데이터 추출 및 버퍼 업데이트
                         synchronized(waveformLock) {
                             val waveformData = byteToAmplitude(data, read)
-                            waveformBuffer.clear()
+                            // 새 데이터는 오른쪽에 추가
                             waveformBuffer.addAll(waveformData)
+                            // 버퍼 크기 제한 (최대 150개 포인트)
+                            while (waveformBuffer.size > 150) {
+                                waveformBuffer.removeFirst() // 가장 오래된 데이터 제거
+                            }
                         }
                     }
                 }
@@ -222,55 +257,21 @@ fun startTimer(
     }
 }
 
-// 오디오 샘플을 파형 데이터로 변환하는 함수
-private fun byteToAmplitude(audioData: ByteArray, bufferSize: Int): List<Float> {
-    val result = mutableListOf<Float>()
-
-    // 데이터 압축 - 버퍼 크기에서 50개의 샘플 포인트 추출
-    val segmentSize = bufferSize / 100
-
-    for (i in 0 until 50) {
-        var sum = 0.0
-        var count = 0
-
-        // 각 세그먼트 내의 샘플 평균 계산
-        val startIdx = i * segmentSize
-        val endIdx = minOf((i + 1) * segmentSize, bufferSize)
-
-        for (j in startIdx until endIdx step 2) {
-            if (j + 1 < bufferSize) {
-                // 16비트 샘플 데이터 (2바이트) 변환
-                val sample = (audioData[j].toInt() and 0xFF) or ((audioData[j + 1].toInt() and 0xFF) shl 8)
-                // 부호 있는 값으로 변환 (16비트)
-                val signedSample = if (sample > 32767) sample - 65536 else sample
-                // 진폭 정규화 (0.1~0.9 범위로)
-                val amplitude = 0.1f + (Math.abs(signedSample) / 32768.0) * 0.8
-                sum += amplitude
-                count++
-            }
-        }
-
-        // 평균 진폭 계산
-        val avgAmplitude = if (count > 0) sum / count else 0.1
-        result.add(avgAmplitude.toFloat())
-    }
-
-    return result
-}
-
 fun animateWaveform(
     coroutineScope: CoroutineScope,
     onWaveformUpdate: (List<Float>) -> Unit
 ): Job {
     return coroutineScope.launch {
         while (true) {
-            delay(100)  // 업데이트 주기 빠르게 변경 (150ms → 100ms)
+            delay(100) // 업데이트 주기 유지
 
             // 실제 오디오 데이터 사용
             val newData = synchronized(waveformLock) {
                 if (waveformBuffer.isEmpty()) {
-                    // 버퍼가 비어있으면 기본 파형 생성 (기존 기능 유지)
-                    List(50) { Random.nextFloat() * 0.8f + 0.1f }
+                    // 버퍼가 비어있을 때 더 작은 기본 파형 생성
+                    // 기존: Random.nextFloat() * 0.3f + 0.05f (0.05 ~ 0.35 범위)
+                    // 변경: 훨씬 더 작은 파형 생성 (0.01 ~ 0.06 범위)
+                    List(50) { Random.nextFloat() * 0.05f + 0.01f }
                 } else {
                     waveformBuffer.toList()
                 }
@@ -280,6 +281,8 @@ fun animateWaveform(
         }
     }
 }
+
+
 
 fun formatTime(seconds: Float): String {
     val minutes = (seconds / 60).toInt()
@@ -366,36 +369,49 @@ fun AudioWaveform(waveformData: List<Float>, modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val barWidth = (width / 100)  // 더 많은 바를 표시하기 위해 조정
-        val gap = barWidth * 0.2f     // 바 사이 간격
+        val barWidth = (width / 150) // 더 많은 바를 표시하기 위해 조정
+        val gap = barWidth * 0.1f // 바 사이 간격 줄임
         val centerY = height / 2
 
-        // 왼쪽 여백 계산 (중앙 정렬을 위해)
-        val totalBarsWidth = (barWidth + gap) * waveformData.size
-        val startX = (width - totalBarsWidth) / 2
+        // 중앙 위치 계산 (중앙 위치는 계산 유지)
+        val centerX = width * 0.5f
 
+        // 진폭 스케일링 팩터 - 파형을 더 높게 표시 (1.8배로 증가)
+        val amplitudeScale = 1.8f
+
+        // 파형 데이터 그리기 (중앙을 기준으로 좌우로 배치)
         waveformData.forEachIndexed { index, amplitude ->
-            val barHeight = height * amplitude
+            // 진폭에 스케일링 적용 (최대 높이를 넘지 않도록 함)
+            val scaledAmplitude = (amplitude * amplitudeScale).coerceAtMost(1.0f)
+            val barHeight = height * scaledAmplitude
             val startY = centerY - barHeight / 2
-            val x = startX + index * (barWidth + gap)
 
-            // 바 그리기
-            drawRect(
-                color = Color.Black,
-                topLeft = Offset(x, startY),
-                size = Size(barWidth, barHeight)
-            )
+            // 중앙에서 오른쪽 부분 (새로운 데이터)
+            if (index >= waveformData.size / 2) {
+                val rightIndex = index - waveformData.size / 2
+                val x = centerX + rightIndex * (barWidth + gap)
+
+                drawRect(
+                    color = Color.Black,
+                    topLeft = Offset(x, startY),
+                    size = Size(barWidth, barHeight)
+                )
+            }
+            // 중앙에서 왼쪽 부분 (오래된 데이터)
+            else {
+                val leftIndex = waveformData.size / 2 - index - 1
+                val x = centerX - (leftIndex + 1) * (barWidth + gap)
+
+                drawRect(
+                    color = Color.Black,
+                    topLeft = Offset(x, startY),
+                    size = Size(barWidth, barHeight)
+                )
+            }
         }
-
-        // 재생 위치 표시선
-        drawLine(
-            color = Color.Red,
-            start = Offset(width * 0.9f, 0f),
-            end = Offset(width * 0.9f, height),
-            strokeWidth = 2f
-        )
     }
 }
+
 
 @Composable
 fun EnvelopeIcon(

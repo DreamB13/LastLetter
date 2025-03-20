@@ -500,15 +500,8 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             recordingState = RecordingState.STOPPED
                                             timerJob?.cancel()
                                             waveformJob?.cancel()
-
-                                            // Google STT로 변환
-                                            recordingState = RecordingState.CONVERTING
-                                            convertAudioToText(File(audioFilePath)) { result ->
-                                                recognizedText = result
-                                                recordingState = RecordingState.STOPPED
-                                                showExitDialog = false
-                                                showSaveDialog = true
-                                            }
+                                            showExitDialog = false
+                                            showSaveButton = true
                                         }
                                         .padding(vertical = 6.dp),
                                     textAlign = TextAlign.Center
@@ -638,7 +631,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp)
+                            .height(150.dp)
                             .padding(16.dp)
                     ) {
                         AudioWaveform(
