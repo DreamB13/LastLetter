@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +55,7 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.ksj.lastletter.R
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
@@ -155,9 +157,10 @@ fun YoursMainScreen(navController: NavController) {
                     // 사용자 아이콘 + 남은 추가 횟수 표시 (예: x2, x0)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Filled.Face,
+                            painter = painterResource(id = R.drawable.person),
                             contentDescription = "편지 받을 사람",
-                            tint = Color.Black
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = "x$remainingAdds", color = Color.Black)
@@ -426,7 +429,7 @@ fun InfoCard(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(48.dp)
             .background(color = Color(0xFFFFF4E6), shape = RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.CenterEnd
     ) {
@@ -434,7 +437,7 @@ fun InfoCard(text: String, modifier: Modifier = Modifier) {
             text = text,
             fontSize = 16.sp,
             color = Color.Black,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(end = 16.dp)
         )
     }
 }
@@ -444,11 +447,13 @@ fun AddButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .size(width = 48.dp, height = 48.dp)
-            .background(Color.White, shape = RoundedCornerShape(12.dp))
-            .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center
+            .size(width = 48.dp, height = 48.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(text = "+", color = Color(0xFFFFDCA8))
+        Icon(
+            painter = painterResource(id = R.drawable.add),
+            contentDescription = "Add",
+            tint = Color.Unspecified
+        )
     }
 }

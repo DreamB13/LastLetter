@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,6 +33,7 @@ import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.ksj.lastletter.R
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
@@ -193,16 +195,18 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                             }
                         }) {
                             Icon(
-                                imageVector = Icons.Filled.Edit,
+                                painter = painterResource(id = R.drawable.edit),
                                 contentDescription = "편집",
-                                tint = Color(0xFFFFDCA8)
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         Icon(
-                            imageVector = Icons.Filled.Email,
+                            painter = painterResource(id = R.drawable.letter),
                             contentDescription = "편지",
-                            tint = Color(0xFFFFDCA8)
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -225,11 +229,13 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.Top
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
+                Column (modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 26.dp)){
                 if (letterData.isEmpty()) {
                     Text(
                         text = "아직 작성된 편지가 없습니다.",
@@ -250,10 +256,13 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                 .padding(bottom = 8.dp)
                         ) {
                             ContextInfoCard(letterInfo.date, letterInfo.title, letterInfo.emotion)
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
             }
+            }
+
 
             // 우측상단에 추가 버튼
             // (편지 목록 아래에 위치)
@@ -366,7 +375,7 @@ fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(48.dp)
             .background(
                 color = when (emotion) {
                     "기쁨" -> Color(0xFFFFF5E9)
@@ -391,64 +400,6 @@ fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
             color = Color.Black,
             modifier = Modifier.padding(end = 16.dp)
         )
-    }
-}
-
-@Composable
-fun RelationshipDropdown(
-    relationships: List<String>,
-    selectedRelationship: String,
-    onRelationshipSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.fillMaxWidth()) {
-        TextField(
-            value = selectedRelationship,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("상대방과의 관계") },
-            trailingIcon = {
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = null
-                    )
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFFFE4C4), shape = RoundedCornerShape(12.dp))
-        )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(Color(0xFFFFF4E6))
-        ) {
-            relationships.forEach { rel ->
-                DropdownMenuItem(
-                    text = { Text(text = rel, color = Color.Black) },
-                    onClick = {
-                        onRelationshipSelected(rel)
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun AddButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .size(48.dp)
-            .background(Color.White, shape = RoundedCornerShape(12.dp))
-            .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = "+", fontSize = 24.sp, color = Color(0xFFFFDCA8))
     }
 }
 
