@@ -343,36 +343,18 @@ fun YoursMainScreen(navController: NavController) {
             confirmButton = {
                 Button(
                     onClick = {
-                        // 광고 시청했다고 가정 -> 남은 횟수 1 증가
-                        remainingAdds++
                         showAdDialog = false
-                        Toast.makeText(
-                            null,
-                            "광고 시청 완료! 남은 추가 횟수가 1 증가했습니다.",
-                            Toast.LENGTH_SHORT
-                        ).show()
-
-                        // Firestore 업데이트
-                        if (uid != null) {
-                            coroutineScope.launch {
-                                try {
-                                    FirebaseFirestore.getInstance().collection("users")
-                                        .document(uid)
-                                        .update("remainingAdds", remainingAdds)
-                                        .await()
-                                } catch (e: Exception) {
-                                    println("Error updating remainingAdds: ${e.message}")
-                                }
-                            }
-                        }
-                    }
+                        navController.navigate("myPage")
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7AC44))
                 ) {
-                    Text("광고 시청하기", color = Color.White)
+                    Text("마이페이지", color = Color.White)
                 }
             },
             dismissButton = {
-                Button(onClick = { showAdDialog = false }) {
-                    Text("취소", color = Color.Black)
+                Button(onClick = { showAdDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7AC44))) {
+                    Text("취소", color = Color.White)
                 }
             },
             containerColor = Color.White,

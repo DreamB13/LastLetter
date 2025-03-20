@@ -333,35 +333,18 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     confirmButton = {
                         Button(
                             onClick = {
-                                letterCredits++
                                 showAdDialog = false
-                                Toast.makeText(
-                                    context,
-                                    "광고 시청 완료! 추가 편지 등록이 가능합니다.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                val uid = FirebaseAuth.getInstance().currentUser?.uid
-                                if (uid != null) {
-                                    coroutineScope.launch {
-                                        try {
-                                            FirebaseFirestore.getInstance().collection("users")
-                                                .document(uid)
-                                                .update("letterCredits", letterCredits)
-                                                .await()
-                                        } catch (e: Exception) {
-                                            println("Error updating letterCredits: ${e.message}")
-                                        }
-                                    }
-                                }
+                                navController.navigate("myPage")
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB2A7FF))
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7AC44))
                         ) {
-                            Text("광고 시청하기", color = Color.White)
+                            Text("마이페이지", color = Color.White)
                         }
                     },
                     dismissButton = {
-                        Button(onClick = { showAdDialog = false }) {
-                            Text("취소", color = Color.Black)
+                        Button(onClick = { showAdDialog = false },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7AC44))) {
+                            Text("취소", color = Color.White)
                         }
                     }
                 )
