@@ -533,19 +533,23 @@ fun EditContactDialog(
                 TextField(
                     value = phoneNumber,
                     onValueChange = { newValue ->
-                        val prefix = "010-"
-                        val currentText = if (newValue.text.startsWith(prefix)) newValue.text
-                        else prefix + newValue.text.filter { it.isDigit() }
-                        val digits = currentText.substring(prefix.length).filter { it.isDigit() }
-                        val limitedDigits = digits.take(8)
-                        val formattedDigits = if (limitedDigits.length > 4)
-                            "${limitedDigits.substring(0, 4)}-${limitedDigits.substring(4)}"
-                        else limitedDigits
-                        val newText = prefix + formattedDigits
-                        val newCursorPosition = maxOf(newValue.selection.start, prefix.length)
-                        phoneNumber = TextFieldValue(text = newText, selection = TextRange(newCursorPosition))
+                        // 입력된 문자에서 숫자만 추출
+                        val digits = newValue.text.filter { it.isDigit() }
+                        // 최대 11자리까지 허용 (모바일 번호: 010xxxx xxxx → 11자리)
+                        val limitedDigits = digits.take(11)
+                        // 자동 포맷팅: 첫 3자리, 그 다음 4자리, 나머지 4자리
+                        val formatted = when {
+                            limitedDigits.length <= 3 -> limitedDigits
+                            limitedDigits.length <= 7 -> "${limitedDigits.substring(0, 3)}-${limitedDigits.substring(3)}"
+                            else -> "${limitedDigits.substring(0, 3)}-${limitedDigits.substring(3, 7)}-${limitedDigits.substring(7)}"
+                        }
+                        // 커서 위치는 끝으로 이동
+                        phoneNumber = TextFieldValue(
+                            text = formatted,
+                            selection = TextRange(formatted.length)
+                        )
                     },
-                    placeholder = { Text("010-8729-7595") },
+                    placeholder = { Text("예: 010-3764-9287") },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -638,7 +642,8 @@ fun ChangePhoneDialog(
     onSave: (String) -> Unit
 ) {
     val context = LocalContext.current
-    var newPhoneNumber by remember { mutableStateOf("") }
+    // TextFieldValue로 관리하여 커서 위치를 제어합니다.
+    var newPhoneNumber by remember { mutableStateOf(TextFieldValue("")) }
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = DialogShape,
@@ -649,15 +654,38 @@ fun ChangePhoneDialog(
                 OutlinedTextField(
                     value = newPhoneNumber,
                     onValueChange = { input ->
-                        val prefix = "010-"
-                        val digits = input.filter { it.isDigit() }
-                        val limited = digits.take(8)
-                        val formatted = if (limited.length > 4)
-                            "${limited.substring(0, 4)}-${limited.substring(4)}"
-                        else limited
-                        newPhoneNumber = prefix + formatted
+                        // 입력값에서 숫자만 추출
+                        val digits = input.text.filter { it.isDigit() }
+                        // 최대 11자리까지 허용 (예: 01012349287)
+                        val limited = digits.take(11)
+                        // 자동 포맷팅:
+                        //  - 3자리 이하: 그대로
+                        //  - 4~7자리: 첫 3자리 후 하이픈 삽입
+                        //  - 8자리 이상: "XXX-XXXX-XXXX" 형식
+                        val formatted = when {
+                            limited.length <= 3 -> limited
+                            limited.length <= 7 -> "${limited.substring(0, 3)}-${limited.substring(3)}"
+                            else -> "${limited.substring(0, 3)}-${limited.substring(3, 7)}-${limited.substring(7)}"
+                        }
+                        // 입력값의 커서 전까지의 텍스트에서 숫자 개수를 계산
+                        val digitsBefore = input.text.substring(0, input.selection.start)
+                            .filter { it.isDigit() }
+                            .length
+                        // 새 문자열에서 커서 위치:
+                        // - 3자리 이하: 그대로
+                        // - 4~7자리: +1 (첫 하이픈)
+                        // - 8자리 이상: +2 (두 하이픈)
+                        val newCursorPosition = when {
+                            digitsBefore <= 3 -> digitsBefore
+                            digitsBefore <= 7 -> digitsBefore + 1
+                            else -> digitsBefore + 2
+                        }.coerceAtMost(formatted.length)
+                        newPhoneNumber = TextFieldValue(
+                            text = formatted,
+                            selection = TextRange(newCursorPosition)
+                        )
                     },
-                    label = { Text("새 전화번호 (010 고정)") },
+                    label = { Text("새 전화번호") },
                     placeholder = { Text("예: 010-1234-5678") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
@@ -671,8 +699,12 @@ fun ChangePhoneDialog(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Button(
-                    onClick = { onSave(formatPhoneNumber(newPhoneNumber)) },
-                    enabled = newPhoneNumber.length >= 13,
+                    onClick = {
+                        onSave(newPhoneNumber.text)
+                        Toast.makeText(context, "전화번호가 변경되었습니다.", Toast.LENGTH_SHORT).show()
+                        onDismiss()
+                    },
+                    enabled = newPhoneNumber.text.length >= 13,
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
                 ) {
