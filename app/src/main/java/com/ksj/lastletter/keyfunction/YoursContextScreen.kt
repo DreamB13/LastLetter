@@ -322,10 +322,10 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     onDismissRequest = { showAdDialog = false },
                     shape = DialogShape,
                     containerColor = DialogBackground,
-                    title = { Text("광고 보기", color = Color.Black) },
+                    title = { Text("편지지를 다 썼어요", color = Color.Black) },
                     text = {
                         Text(
-                            text = "광고를 시청하시면 추가 편지 등록이 가능합니다.",
+                            text = "추가 결제를 통해서 편지지를 구매하실 수 있어요!",
                             color = Color.Black,
                             fontSize = 16.sp
                         )

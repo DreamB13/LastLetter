@@ -254,10 +254,10 @@ fun YoursMainScreen(navController: NavController) {
     if (showAdDialog) {
         AlertDialog(
             onDismissRequest = { showAdDialog = false },
-            title = { Text("광고 보기", color = Color.Black) },
+            title = { Text("사용 인원을 초과했어요!", color = Color.Black) },
             text = {
                 Text(
-                    text = "광고를 시청하시면 추가 사용자 등록이 가능합니다.",
+                    text = "추가 결제를 통해서 편지를 보낼 사람을 추가할 수 있어요",
                     color = Color.Black,
                     fontSize = 16.sp
                 )
