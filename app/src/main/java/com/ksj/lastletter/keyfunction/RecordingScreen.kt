@@ -1028,14 +1028,15 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                     showSaveDialog = false
                                     isLoading = true
                                     //자동저장 선택
-                                    RunModel(
-                                        coroutineScope,
-                                        recognizedText,
-                                        navController,
-                                        { customDateText = it },
-                                        { selectedEmotion = it }
-                                    )
-                                    isLoading = false
+                                    coroutineScope.launch {
+                                        RunModel(
+                                            coroutineScope,
+                                            recognizedText,
+                                            navController,
+                                            { customDateText = it },
+                                            { selectedEmotion = it }
+                                        )
+                                    }
                                 } else {
                                     showSaveDialog = false
                                     coroutineScope.launch {
@@ -1073,14 +1074,6 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                             )
                         ) {
                             Text("저장")
-                            if (isLoading) {
-                                AlertDialog(
-                                    onDismissRequest = {},
-                                    title = { Text("분석 중...") },
-                                    text = { CircularProgressIndicator() },
-                                    confirmButton = {}
-                                )
-                            }
                         }
                     },
                     dismissButton = {
