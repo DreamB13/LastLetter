@@ -49,10 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.ksj.lastletter.R
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
@@ -103,20 +105,33 @@ fun YoursMainScreen(navController: NavController) {
                     }
                 },
                 title = {
-                    Box(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 왼쪽 텍스트
                         Text(
                             text = "남은 너에게",
                             fontWeight = FontWeight.Bold,
                             color = Color.Black,
                         )
+                        // 오른쪽 아이콘 + x0
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.person),
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = " x0",
+                                color = Color.Black,
+                            )
+                        }
                     }
-                },
-                // 오른쪽 아이콘 (actions 자리)
-                actions = {
-                    Icon(
-                        imageVector = Icons.Filled.Face,
-                        contentDescription = "편지 받을 사람",
-                    )
                 }
             )
         }
@@ -129,7 +144,7 @@ fun YoursMainScreen(navController: NavController) {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             contacts.forEach { documentContact ->
                 InfoCard(
                     text = documentContact.contact.name,
@@ -300,15 +315,14 @@ fun InfoCard(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(48.dp)
             .background(color = Color(0xFFFFF4E6), shape = RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.CenterEnd
     ) {
         Text(
             text = text,
-            fontSize = 16.sp,
             color = Color.Black,
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(end = 16.dp)
         )
     }
 }
@@ -318,11 +332,13 @@ fun AddButton(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clickable(onClick = onClick)
-            .size(width = 48.dp, height = 48.dp)
-            .background(Color.White, shape = RoundedCornerShape(12.dp))
-            .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center
+            .size(width = 48.dp, height = 48.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(text = "+", color = Color(0xFFFFDCA8))
+        Icon(
+            painter = painterResource(id = R.drawable.add),
+            contentDescription = "Add",
+            tint = Color.Unspecified
+        )
     }
 }

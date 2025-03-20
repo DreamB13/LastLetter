@@ -44,12 +44,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.ksj.lastletter.R
 import com.ksj.lastletter.firebase.Contact
 import com.ksj.lastletter.firebase.ContactRepository
 import kotlinx.coroutines.Dispatchers
@@ -108,7 +110,10 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     val lettersRef = db.collection("users").document(userId)
                         .collection("Yours").document(contactId)
                         .collection("letters")
-                        .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                        .orderBy(
+                            "timestamp",
+                            com.google.firebase.firestore.Query.Direction.DESCENDING
+                        )
 
                     val result = withContext(Dispatchers.IO) {
                         lettersRef.get().await()
@@ -170,17 +175,19 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "이름 수정",
-                                tint = Color(0xFFFFDCA8)
+                                painter = painterResource(id = R.drawable.edit),
+                                contentDescription = "사용자 편집",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         // 편지 아이콘 + 개수
                         Icon(
-                            imageVector = Icons.Default.Email,
+                            painter = painterResource(id = R.drawable.letter),
                             contentDescription = "편지",
-                            tint = Color(0xFFFFDCA8)
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
@@ -203,8 +210,7 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.Top
             ) {
                 // + 버튼 (편지 작성)
@@ -212,7 +218,7 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    ContextAddButton(
+                    AddButton(
                         onClick = {
                             contactState.value?.let { contactData ->
                                 navController.navigate("recording/$contactId/${contactData.name}")
@@ -222,7 +228,8 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-
+                Column (modifier = Modifier
+                    .verticalScroll(rememberScrollState())){
                 // 편지 목록
                 if (letterData.isEmpty()) {
                     Text(
@@ -238,14 +245,22 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                     // InputText 화면으로 이동
                                     val encodedDocId = Uri.encode(letterInfo.docId)
                                     val encodedContactId = Uri.encode(contactId)
-                                    navController.navigate("inputtextscreen/$encodedDocId/$encodedContactId/${Uri.encode("fromfirebase")}")
+                                    navController.navigate(
+                                        "inputtextscreen/$encodedDocId/$encodedContactId/${
+                                            Uri.encode(
+                                                "fromfirebase"
+                                            )
+                                        }"
+                                    )
                                 }
                                 .padding(bottom = 8.dp)
                         ) {
                             ContextInfoCard(letterInfo.date, letterInfo.title, letterInfo.emotion)
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
+            }
             }
 
             // 이름 수정 다이얼로그
@@ -298,7 +313,10 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
                                     coroutineScope.launch {
                                         try {
                                             val contactRepository = ContactRepository()
-                                            contactRepository.updateContact(contactId, updatedContact)
+                                            contactRepository.updateContact(
+                                                contactId,
+                                                updatedContact
+                                            )
                                             contactState.value = updatedContact
                                         } catch (e: Exception) {
                                             println("사용자 정보 업데이트 실패: ${e.message}")
@@ -330,7 +348,7 @@ fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(60.dp)
+            .height(48.dp)
             .background(
                 color = when (emotion) {
                     "기쁨" -> Color(0xFFFFF5E9)
@@ -354,24 +372,6 @@ fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
             text = text,
             color = Color.Black,
             modifier = Modifier.padding(end = 16.dp)
-        )
-    }
-}
-
-@Composable
-fun ContextAddButton(onClick: () -> Unit = {}) {
-    Box(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .size(width = 48.dp, height = 48.dp)
-            .background(Color.White, shape = RoundedCornerShape(12.dp))
-            .border(2.dp, Color(0xFFFFDCA8), shape = RoundedCornerShape(12.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "+",
-            fontSize = 24.sp,
-            color = Color(0xFFFFDCA8)
         )
     }
 }

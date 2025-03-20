@@ -398,33 +398,31 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                 AlertDialog(
                     onDismissRequest = { showExitDialog = false },
                     title = {
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "녹음 파일을 저장할까요?",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
+                        // 기존 Box 대신 Text만 배치하고 여백 최소화
+                        Text(
+                            text = "녹음 파일을 저장할까요?",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color.Black,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        )
                     },
                     text = {
-                        // 여백 추가를 위한 패딩 적용
+                        // 불필요한 Column padding 제거
                         Column(
-                            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 0.dp)
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
+                                    .fillMaxWidth(),
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                // 취소 버튼
+                                // ───────────── 취소 버튼 ─────────────
                                 Text(
                                     text = "취소",
                                     fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = Color.Black,
                                     modifier = Modifier
                                         .weight(1f)
@@ -439,31 +437,31 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                                     timerSeconds = newTime
                                                     formattedTime = formatTime(newTime)
                                                 }
-
-                                                waveformJob =
-                                                    animateWaveform(coroutineScope) { newData ->
-                                                        waveformData = newData
-                                                    }
+                                                waveformJob = animateWaveform(coroutineScope) { newData ->
+                                                    waveformData = newData
+                                                }
                                             }
                                             showExitDialog = false
                                         }
-                                        .padding(vertical = 12.dp),
+                                        // 세로 패딩을 줄여 버튼 높이 축소
+                                        .padding(vertical = 6.dp),
                                     textAlign = TextAlign.Center
                                 )
 
                                 // 수직 구분선
                                 Box(
                                     modifier = Modifier
-                                        .height(16.dp)
+                                        .height(14.dp) // 구분선 높이도 살짝 줄임
                                         .width(1.dp)
                                         .background(Color.LightGray.copy(alpha = 0.5f))
                                         .align(Alignment.CenterVertically)
                                 )
 
-                                // 저장 안 함 버튼
+                                // ─────────── 저장 안 함 버튼 ───────────
                                 Text(
                                     text = "저장 안 함",
                                     fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = Color.Black,
                                     modifier = Modifier
                                         .weight(1f)
@@ -475,23 +473,24 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             showExitDialog = false
                                             navController.popBackStack()
                                         }
-                                        .padding(vertical = 12.dp),
+                                        .padding(vertical = 6.dp),
                                     textAlign = TextAlign.Center
                                 )
 
                                 // 수직 구분선
                                 Box(
                                     modifier = Modifier
-                                        .height(16.dp)
+                                        .height(14.dp)
                                         .width(1.dp)
                                         .background(Color.LightGray.copy(alpha = 0.5f))
                                         .align(Alignment.CenterVertically)
                                 )
 
-                                // 저장 버튼
+                                // ───────────── 저장 버튼 ─────────────
                                 Text(
                                     text = "저장",
                                     fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = Color.Black,
                                     modifier = Modifier
                                         .weight(1f)
@@ -501,9 +500,9 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                             recordingState = RecordingState.STOPPED
                                             timerJob?.cancel()
                                             waveformJob?.cancel()
+
                                             // Google STT로 변환
                                             recordingState = RecordingState.CONVERTING
-                                            // 오디오 파일을 텍스트로 변환
                                             convertAudioToText(File(audioFilePath)) { result ->
                                                 recognizedText = result
                                                 recordingState = RecordingState.STOPPED
@@ -511,7 +510,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                                 showSaveDialog = true
                                             }
                                         }
-                                        .padding(vertical = 12.dp),
+                                        .padding(vertical = 6.dp),
                                     textAlign = TextAlign.Center
                                 )
                             }
@@ -520,9 +519,10 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                     confirmButton = {},
                     dismissButton = {},
                     containerColor = Color.White,
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(18.dp)
                 )
             }
+
 
             if (recordingState == RecordingState.NOT_STARTED) {
                 // 녹음 시작 전 화면
