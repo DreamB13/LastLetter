@@ -19,7 +19,7 @@ interface ApiService {
 
 // Retrofit 클라이언트 설정
 object RetrofitClient {
-    private const val BASE_URL = "https://5784-34-124-238-241.ngrok-free.app" // 코랩 서버 주소
+    private const val BASE_URL = "https://f913-34-74-83-198.ngrok-free.app" // 코랩 서버 주소
 
     val apiService: ApiService by lazy {
         Retrofit.Builder()

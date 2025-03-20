@@ -213,7 +213,8 @@ fun AnswerIsNull(questionAnswer: QuestionAnswer, onClick: () -> Unit) {
     ) {
         Button(
             onClick = onClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB)),
+            shape = RoundedCornerShape(10.dp),
         ) {
             Text("광고 보고 수정하기", color = Color.Black)
         }
@@ -244,7 +245,8 @@ fun DailyQuestionText(questionAnswer: QuestionAnswer, onClick: () -> Unit) {
     ) {
         Button(
             onClick = onClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB)),
+            shape = RoundedCornerShape(10.dp),
         ) {
             Text("광고 보고 수정하기", color = Color.Black)
         }
@@ -326,13 +328,15 @@ fun DailyQuestionTextField(
         )
         Button(
             onClick = onClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB)),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text("광고 보고 600자로 늘리기", color = Color.Black)
         }
         Button(
             onClick = { onClickSave(letterText, selectedEmotion) },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44))
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text("저장하기", color = Color.Black)
         }
