@@ -220,6 +220,8 @@ fun InputTextScreen(
                 Button(
                     onClick = {/*광고 띄우면서 최대 글자수 1000으로 변경*/
                         maxTextLength = 1000
+                        Toast.makeText(context, "${maxTextLength}자로 늘어났습니다", Toast.LENGTH_SHORT)
+                            .show()
                     },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB)),

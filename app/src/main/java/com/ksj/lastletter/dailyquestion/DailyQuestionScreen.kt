@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -316,6 +317,8 @@ fun DailyQuestionScreen(navController: NavController) {
                                 }
                         }
                     },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44)),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(end = 16.dp)
@@ -345,9 +348,11 @@ fun DailyQuestionScreen(navController: NavController) {
                         isEditing = true
                         isEdited = true
                     },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xffFFEBEB)),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("광고 시청 후 수정하기")
+                    Text("광고 시청 후 수정하기", color = Color.Black)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
