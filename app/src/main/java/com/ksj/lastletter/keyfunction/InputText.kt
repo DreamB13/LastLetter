@@ -195,7 +195,8 @@ fun InputTextScreen(
                         .align(Alignment.CenterVertically)
                 )
             }
-            Column (modifier = Modifier.fillMaxSize()
+            Column (
+                modifier = Modifier.fillMaxSize()
                 .weight(11f)
             ){
                 TextField(
@@ -215,7 +216,7 @@ fun InputTextScreen(
                     modifier = Modifier
                         .padding(10.dp)
                         .fillMaxWidth()
-                        .heightIn(min = 200.dp, max = 1000.dp)
+                        .heightIn(min = 200.dp, max = 1500.dp)
                 )
             }
             Column(
@@ -307,7 +308,7 @@ fun InputTextScreen(
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(5f)
+                    .weight(2f)
             )
         }
     }
