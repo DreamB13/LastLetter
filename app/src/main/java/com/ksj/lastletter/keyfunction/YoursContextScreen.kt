@@ -50,6 +50,7 @@ import java.util.Locale
 private val DialogShape = RoundedCornerShape(20.dp)
 private val DialogBackground = Color(0xFFFFF2E3) // 연한 살구색 예시
 private val ConfirmButtonColor = Color(0xFFB2A7FF) // 보라색 (확인)
+private val EditButtonColor = Color(0xFFF7AC44)    // 주황색 (편집)
 private val DangerButtonColor = Color(0xFFFFB2A7)  // 핑크 (위험/삭제)
 private val CancelButtonColor = Color.LightGray      // 취소
 
@@ -519,7 +520,7 @@ fun EditContactDialog(
                         onDismiss()
                     },
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("저장", color = Color.White)
                 }

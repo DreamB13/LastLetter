@@ -45,6 +45,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -90,6 +91,7 @@ private val DialogShape = RoundedCornerShape(20.dp)
 private val DialogBackground = Color(0xFFFFF2E3) // 연한 살구색 (예시)
 private val ConfirmButtonColor = Color(0xFFB2A7FF) // 보라색 (확인)
 private val DangerButtonColor = Color(0xFFFFB2A7)  // 핑크 (위험/삭제)
+private val EditButtonColor = Color(0xFFF7AC44)    // 주황색 (편집)
 private val CancelButtonColor = Color.LightGray      // 취소
 
 //────────────────────────────────────────────────────────────────────────────
@@ -430,7 +432,7 @@ fun DailyQuestionSelectionDialog(
                 Button(
                     onClick = { onSave(tempSelectedIds.toList()) },
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("저장", color = Color.White)
                 }
@@ -527,8 +529,16 @@ fun EditContactDialog(
                     onValueChange = { name = it.take(15) },
                     placeholder = { Text("남편") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.White,
+                        unfocusedIndicatorColor = Color.White,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+
                 )
+
                 Text("전화번호", fontSize = 14.sp, color = Color.Black)
                 TextField(
                     value = phoneNumber,
@@ -552,7 +562,13 @@ fun EditContactDialog(
                     placeholder = { Text("예: 010-3764-9287") },
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.White,
+                        unfocusedIndicatorColor = Color.White,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
                 Text("상대방과의 관계", fontSize = 14.sp, color = Color.Black)
                 Box(
@@ -610,7 +626,7 @@ fun EditContactDialog(
                         onDismiss()
                     },
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("저장", color = Color.White)
                 }
@@ -706,7 +722,7 @@ fun ChangePhoneDialog(
                     },
                     enabled = newPhoneNumber.text.length >= 13,
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("저장", color = Color.White)
                 }
@@ -769,7 +785,7 @@ fun DeleteAccountDialog(
                 Button(
                     onClick = onConfirm,
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = DangerButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("탈퇴", color = Color.White)
                 }
@@ -840,7 +856,7 @@ fun ReauthenticateDialog(
                         }
                     },
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("재인증", color = Color.White)
                 }

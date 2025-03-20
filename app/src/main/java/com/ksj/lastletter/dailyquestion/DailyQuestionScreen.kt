@@ -248,7 +248,7 @@ fun DailyQuestionScreen(navController: NavController) {
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(150.dp)
                         .padding(16.dp),
                     placeholder = { Text("답변을 적어주세요") },
                     shape = RoundedCornerShape(8.dp),

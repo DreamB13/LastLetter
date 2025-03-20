@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,7 +59,7 @@ import com.ksj.lastletter.AppViewModel
 import com.ksj.lastletter.firebase.DocumentContact
 import java.time.LocalDate
 import java.time.LocalDateTime
-
+private val EditButtonColor = Color(0xFFF7AC44)    // 주황색 (편집)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MyPageScreen(navController: NavController) {
@@ -192,7 +193,8 @@ fun MyPageScreen(navController: NavController) {
                                 lastAttendanceDate = now.toLocalDate()
                             }
                         },
-                        enabled = !isAttendanceComplete
+                        enabled = !isAttendanceComplete,
+                        colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                     ) {
                         Text(text = if (isAttendanceComplete) "출석완료" else "출석하기")
                     }

@@ -58,6 +58,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.ksj.lastletter.R
 import java.util.concurrent.TimeUnit
 
+private val EditButtonColor = Color(0xFFF7AC44)    // 주황색 (편집)
 // 확장 함수: Context에서 Activity 찾기
 fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -240,7 +241,7 @@ fun LoginScreen(
                             .padding(horizontal = 16.dp)
                             .height(50.dp),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors()
+                        colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                     ) {
                         Text("휴대폰 번호로 시작하기")
                     }
@@ -377,7 +378,8 @@ fun PhoneAuthDialogContent(
                         .build()
                     PhoneAuthProvider.verifyPhoneNumber(options)
                 },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
             ) {
                 Text("인증 코드 받기", fontSize = 16.sp)
             }
@@ -409,7 +411,8 @@ fun PhoneAuthDialogContent(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
             ) {
                 Text("로그인", fontSize = 16.sp)
             }

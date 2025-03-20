@@ -42,6 +42,7 @@ private val DialogShape = RoundedCornerShape(20.dp)
 private val DialogBackground = Color(0xFFFFF2E3) // 연한 살구색
 private val ConfirmButtonColor = Color(0xFFB2A7FF) // 보라색 (확인)
 private val CancelButtonColor = Color.LightGray    // 취소
+private val EditButtonColor = Color(0xFFF7AC44)    // 주황색 (편집)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -447,7 +448,7 @@ fun AddUserDialog(
                         onDismiss()
                     },
                     shape = RoundedCornerShape(50),
-                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = EditButtonColor)
                 ) {
                     Text("저장", color = Color.White)
                 }
