@@ -228,9 +228,8 @@ fun PhoneTermScreen(
         Dialog(onDismissRequest = { showTosDialog = false }) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth(0.95f)  // 화면 너비 95%
-                    .fillMaxHeight(0.8f)  // 화면 높이 80%
-                    .padding(16.dp),
+                    .fillMaxWidth()  // 화면 너비 95%
+                    .fillMaxHeight(0.8f),  // 화면 높이 80%
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White
             ) {
@@ -302,9 +301,8 @@ fun PhoneTermScreen(
         Dialog(onDismissRequest = { showPrivacyDialog = false }) {
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth(0.95f)
-                    .fillMaxHeight(0.8f)
-                    .padding(16.dp),
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.8f),
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White
             ) {

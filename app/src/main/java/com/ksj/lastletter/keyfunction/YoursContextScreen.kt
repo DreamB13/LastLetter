@@ -357,8 +357,9 @@ fun YoursContextScreen(contactId: String, navController: NavController) {
 fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
     Row(
         modifier = Modifier
+            .padding(horizontal = 16.dp)
             .fillMaxWidth()
-            .height(48.dp)
+            .padding(16.dp)
             .background(
                 color = when (emotion) {
                     "기쁨" -> Color(0xFFFFF5E9)
