@@ -172,12 +172,30 @@ fun pauseRecording(recorder: AudioRecord?) {
 }
 
 fun resumeRecording(recorder: AudioRecord?) {
-    // 녹음 재개
     if (!isRecording && recorder != null) {
-        isRecording = true
         recorder.startRecording()
+        isRecording = true
+        recordingThread = Thread {
+            val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            val bufferSize = minBufferSize * 2
+            val data = ByteArray(bufferSize)
+            while (isRecording) {
+                val read = recorder.read(data, 0, bufferSize)
+                if (read > 0) {
+                    synchronized(waveformLock) {
+                        val waveformData = byteToAmplitude(data, read)
+                        waveformBuffer.addAll(waveformData)
+                        while (waveformBuffer.size > 150) {
+                            waveformBuffer.removeFirst()
+                        }
+                    }
+                }
+            }
+        }
+        recordingThread?.start()
     }
 }
+
 
 fun stopRecording(recorder: AudioRecord?) {
     try {
