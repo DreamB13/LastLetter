@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -61,6 +63,7 @@ fun InputTextScreen(
     customDateText: String,
     selectedEmotion: String
 ) {
+    val scrollState = rememberScrollState()
     var titleText by remember { mutableStateOf(customDateText) }
     var maxTextLength by remember { mutableIntStateOf(500) }
     var letterText by remember { mutableStateOf(recognizedText) }
@@ -192,25 +195,29 @@ fun InputTextScreen(
                         .align(Alignment.CenterVertically)
                 )
             }
-            TextField(
-                value = letterText,
-                onValueChange = { inputText ->
-                    if (inputText.length <= maxTextLength) {
-                        letterText = inputText
-                    }
-                },
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedContainerColor = Color(0xffFFF6FE),
-                    unfocusedContainerColor = Color(0xffFFF6FE)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .padding(10.dp)
-                    .fillMaxSize()
-                    .weight(3f)
-            )
+            Column (modifier = Modifier.fillMaxSize()
+                .weight(11f)
+            ){
+                TextField(
+                    value = letterText,
+                    onValueChange = { inputText ->
+                        if (inputText.length <= maxTextLength) {
+                            letterText = inputText
+                        }
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = Color(0xffFFF6FE),
+                        unfocusedContainerColor = Color(0xffFFF6FE)
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .fillMaxWidth()
+                        .heightIn(min = 200.dp, max = 1000.dp)
+                )
+            }
             Column(
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier
