@@ -140,9 +140,10 @@ fun PhoneTermScreen(
                 onValueChange = { newValue ->
                     // preFilledPhone가 있으면 수정할 수 없도록 함
                     if (preFilledPhone.isEmpty()) {
+                        // 입력값에서 숫자만 추출하여 전체 번호로 처리 (010- 접두사 없이)
                         val digits = newValue.filter { it.isDigit() }
-                        val phonePart = if (digits.startsWith("010")) digits.drop(3) else digits
-                        phoneNumberInput = phonePart.take(8)
+                        // 최대 11자리까지 허용 (예: 01012349287)
+                        phoneNumberInput = digits.take(11)
                     }
                 },
                 label = { Text("휴대폰 번호") },
@@ -301,11 +302,9 @@ fun CheckItem(
 
 fun formatPhoneNumber(input: String): String {
     return when {
-        input.length <= 4 -> "010-$input"
-        else -> {
-            val first4 = input.take(4)
-            val last4 = input.drop(4)
-            "010-$first4-$last4"
-        }
+        input.length <= 3 -> input
+        input.length <= 7 -> "${input.substring(0, 3)}-${input.substring(3)}"
+        else -> "${input.substring(0, 3)}-${input.substring(3, 7)}-${input.substring(7)}"
     }
 }
+
