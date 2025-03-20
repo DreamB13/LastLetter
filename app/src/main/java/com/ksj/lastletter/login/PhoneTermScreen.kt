@@ -34,7 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -55,13 +57,16 @@ fun PhoneTermScreen(
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
+    // 전화번호 상태: TextFieldValue로 관리 (preFilledPhone이 없을 때)
+    var phoneNumberInput by remember { mutableStateOf(TextFieldValue("")) }
 
     val tosText = stringResource(id = R.string.PRIVACY_TITLE)
     val privacyText = stringResource(id = R.string.PRIVACY_CONTENT)
 
-    // preFilledPhone가 비어있지 않으면 해당 값(8자리)을 사용, 그렇지 않으면 사용자가 입력하도록 함
-    var phoneNumberInput by remember { mutableStateOf(preFilledPhone) }
-    val isPhoneValid = phoneNumberInput.length == 8
+    // effectivePhone: preFilledPhone이 있으면 그 값을 사용, 없으면 phoneNumberInput.text를 사용
+    val effectivePhone = if (preFilledPhone.isNotEmpty()) preFilledPhone else phoneNumberInput.text
+    // 유효성 검사: effectivePhone에서 숫자만 추출한 길이가 11이어야 함
+    val isPhoneValid = effectivePhone.filter { it.isDigit() }.length == 11
 
     var termsChecked by remember { mutableStateOf(false) }
     var privacyChecked by remember { mutableStateOf(false) }
@@ -91,7 +96,8 @@ fun PhoneTermScreen(
                             firestore.collection("users")
                                 .document(uid)
                                 .set(
-                                    mapOf("phoneNumber" to formatPhoneNumber(phoneNumberInput)),
+                                    // preFilledPhone이 있으면 그대로, 없으면 포맷팅된 phoneNumberInput의 text 사용
+                                    mapOf("phoneNumber" to formatPhoneNumber(TextFieldValue(effectivePhone)).text),
                                     com.google.firebase.firestore.SetOptions.merge()
                                 )
                                 .addOnSuccessListener {
@@ -136,17 +142,19 @@ fun PhoneTermScreen(
         ) {
             Text(text = "전화번호를 입력해 주세요", fontSize = 18.sp)
             OutlinedTextField(
-                value = formatPhoneNumber(phoneNumberInput),
+                value = if (preFilledPhone.isNotEmpty()) {
+                    TextFieldValue(preFilledPhone)
+                } else {
+                    phoneNumberInput
+                },
                 onValueChange = { newValue ->
-                    // preFilledPhone가 있으면 수정할 수 없도록 함
                     if (preFilledPhone.isEmpty()) {
-                        // 입력값에서 숫자만 추출하여 전체 번호로 처리 (010- 접두사 없이)
-                        val digits = newValue.filter { it.isDigit() }
-                        // 최대 11자리까지 허용 (예: 01012349287)
-                        phoneNumberInput = digits.take(11)
+                        // newValue를 포맷팅 함수에 넣어 업데이트 (커서 위치도 자동 보정됨)
+                        phoneNumberInput = formatPhoneNumber(newValue)
                     }
                 },
                 label = { Text("휴대폰 번호") },
+                placeholder = { Text("예: 010-1234-5678") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 enabled = preFilledPhone.isEmpty(),
@@ -185,7 +193,7 @@ fun PhoneTermScreen(
                             firestore.collection("users")
                                 .document(uid)
                                 .set(
-                                    mapOf("phoneNumber" to formatPhoneNumber(phoneNumberInput)),
+                                    mapOf("phoneNumber" to formatPhoneNumber(TextFieldValue(effectivePhone)).text),
                                     com.google.firebase.firestore.SetOptions.merge()
                                 )
                                 .addOnSuccessListener {
@@ -300,11 +308,34 @@ fun CheckItem(
     }
 }
 
-fun formatPhoneNumber(input: String): String {
-    return when {
-        input.length <= 3 -> input
-        input.length <= 7 -> "${input.substring(0, 3)}-${input.substring(3)}"
-        else -> "${input.substring(0, 3)}-${input.substring(3, 7)}-${input.substring(7)}"
-    }
-}
+fun formatPhoneNumber(input: TextFieldValue): TextFieldValue {
+    // 입력된 텍스트에서 숫자만 추출하고 최대 11자리까지 제한
+    val digits = input.text.filter { it.isDigit() }
+    val limited = digits.take(11)
 
+    // 자동 포맷팅:
+    // - 3자리 이하: 그대로
+    // - 4자리부터 7자리: "XXX-..." 형식
+    // - 8자리 이상: "XXX-XXXX-XXXX" 형식
+    val formatted = when {
+        limited.length <= 3 -> limited
+        limited.length <= 7 -> "${limited.substring(0, 3)}-${limited.substring(3)}"
+        else -> "${limited.substring(0, 3)}-${limited.substring(3, 7)}-${limited.substring(7)}"
+    }
+
+    // 입력값의 커서 전까지의 텍스트에서 숫자 개수를 계산
+    val digitsBefore = input.text.substring(0, input.selection.start)
+        .filter { it.isDigit() }
+        .length
+    // 새 문자열에서 커서 위치:
+    // - 3자리 이하: 그대로
+    // - 4~7자리: +1 (첫 하이픈)
+    // - 8자리 이상: +2 (두 하이픈)
+    val newCursorPosition = when {
+        digitsBefore <= 3 -> digitsBefore
+        digitsBefore <= 7 -> digitsBefore + 1
+        else -> digitsBefore + 2
+    }.coerceAtMost(formatted.length)
+
+    return TextFieldValue(text = formatted, selection = TextRange(newCursorPosition))
+}
