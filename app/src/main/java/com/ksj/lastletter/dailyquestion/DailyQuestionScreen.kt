@@ -168,7 +168,11 @@ fun DailyQuestionScreen(navController: NavController) {
                     IconButton(onClick = {
                         Toast.makeText(context, "알림 기능은 준비 중 입니다.", Toast.LENGTH_SHORT).show()
                     }) {
-                        Icon(Icons.Filled.Notifications, contentDescription = "알림", tint = Color.Black)
+                        Icon(
+                            Icons.Filled.Notifications,
+                            contentDescription = "알림",
+                            tint = Color.Black
+                        )
                     }
                     IconButton(onClick = { navController.navigate("settings") }) {
                         Icon(Icons.Filled.Settings, contentDescription = "설정", tint = Color.Black)
@@ -234,7 +238,11 @@ fun DailyQuestionScreen(navController: NavController) {
                         if (it.length <= maxLength) {
                             answer.value = it
                         } else {
-                            Toast.makeText(context, "최대 $maxLength 자까지 입력 가능합니다.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "최대 $maxLength 자까지 입력 가능합니다.",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     },
                     modifier = Modifier
@@ -252,14 +260,16 @@ fun DailyQuestionScreen(navController: NavController) {
                 )
                 Text(
                     text = "${answer.value.length}/$maxLength 자",
-                    modifier = Modifier.padding(top = 4.dp, end = 16.dp).align(Alignment.End),
+                    modifier = Modifier
+                        .padding(top = 4.dp, end = 16.dp)
+                        .align(Alignment.End),
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
                         if (uid != null) {
-                            if(!isEdited) {
+                            if (!isEdited) {
                                 coroutineScope.launch {
                                     isLoading = true
                                     try {
@@ -306,7 +316,8 @@ fun DailyQuestionScreen(navController: NavController) {
                                 }
                         }
                     },
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier
+                        .align(Alignment.End)
                         .padding(end = 16.dp)
                 ) {
                     Text("저장하기", color = Color.Black)
@@ -341,7 +352,9 @@ fun DailyQuestionScreen(navController: NavController) {
             }
             Spacer(modifier = Modifier.height(24.dp))
             Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
