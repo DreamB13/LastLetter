@@ -38,7 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -72,11 +74,13 @@ fun extractLocalPhoneNumber(normalized: String): String {
     if (!digits.startsWith("0")) {
         digits = "0$digits"
     }
-    // 전화번호가 "010"으로 시작하고 전체 길이가 11자리라면, 뒤 8자리를 반환
-    if (digits.startsWith("010") && digits.length >= 11) {
-        return digits.substring(3, 11)
+    // 전화번호가 "010"으로 시작하고 전체 길이가 11자리라면, 뒤 10자리를 반환
+    // 첫 3자리 뒤 4자리찍 - 으로 구분
+    if (digits.startsWith("010") && digits.length == 11) {
+        digits = digits.substring(0, 3) + "-" + digits.substring(3, 7) + "-" + digits.substring(7)
     }
-    return ""
+    return digits
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -280,8 +284,8 @@ fun PhoneAuthDialogContent(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    // 전화번호는 고정된 "+82"와 뒤의 사용자가 입력하는 부분으로 구성
-    var phoneNumber by remember { mutableStateOf("+82") }
+    // 전화번호 상태: 이제 +82 접두어 없이 전체 번호(예: "01012349287")를 입력
+    var phoneNumber by remember { mutableStateOf(TextFieldValue("")) }
     var code by remember { mutableStateOf("") }
     var verificationId by remember { mutableStateOf("") }
     var isCodeSent by remember { mutableStateOf(false) }
@@ -293,34 +297,48 @@ fun PhoneAuthDialogContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (!isCodeSent) {
-            // 고정된 "+82"와 뒤에 editable한 번호 입력란을 Row로 구성
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            // 전화번호 입력 필드: 사용자가 전체 번호를 입력하면 자동 포맷팅됨
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = { newValue ->
+                    // 입력된 텍스트에서 숫자만 추출
+                    val digits = newValue.text.filter { it.isDigit() }
+                    // 최대 11자리까지 허용 (예: 01012349287)
+                    val limited = digits.take(11)
+                    // 자동 포맷팅:
+                    // - 3자리 이하: 그대로
+                    // - 4~7자리: "XXX-..." 형식
+                    // - 8자리 이상: "XXX-XXXX-XXXX" 형식
+                    val formatted = when {
+                        limited.length <= 3 -> limited
+                        limited.length <= 7 -> "${limited.substring(0, 3)}-${limited.substring(3)}"
+                        else -> "${limited.substring(0, 3)}-${limited.substring(3, 7)}-${limited.substring(7)}"
+                    }
+                    // 입력값의 커서 전까지의 숫자 개수를 계산
+                    val digitsBefore = newValue.text.substring(0, newValue.selection.start)
+                        .filter { it.isDigit() }
+                        .length
+                    // 커서 위치: 3자리 이하 → 그대로, 4~7자리 → +1, 8자리 이상 → +2
+                    val newCursorPosition = when {
+                        digitsBefore <= 3 -> digitsBefore
+                        digitsBefore <= 7 -> digitsBefore + 1
+                        else -> digitsBefore + 2
+                    }.coerceAtMost(formatted.length)
+                    phoneNumber = TextFieldValue(text = formatted, selection = TextRange(newCursorPosition))
+                },
+                label = { Text("전화번호") },
+                placeholder = { Text("예: 010-1234-5678") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "+82",
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
-                OutlinedTextField(
-                    value = phoneNumber.removePrefix("+82"),
-                    onValueChange = {
-                        phoneNumber = "+82" + it
-                    },
-                    label = { Text("전화번호 (0 제외)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
-                    // 전화번호 정규화: +82 뒤의 숫자만 남기고, 선행 0은 제거 (Firebase에 전달할 형식은 "+82" + 나머지)
-                    val digitsPart = phoneNumber.removePrefix("+82").filter { it.isDigit() }
-                    val cleanDigits = if (digitsPart.startsWith("0")) digitsPart.substring(1) else digitsPart
-                    normalizedPhone = "+82" + cleanDigits
+                    // 정규화: 입력된 전화번호의 숫자만 남김 (예: "01012349287")
+                    val digits = phoneNumber.text.filter { it.isDigit() }
+                    normalizedPhone = "+82" + if (digits.startsWith("0")) digits.drop(1) else digits
 
-                    // Activity 추출
                     val activity = context.findActivity()
                     if (activity == null) {
                         Toast.makeText(context, "Activity를 찾을 수 없습니다.", Toast.LENGTH_SHORT).show()
@@ -333,17 +351,16 @@ fun PhoneAuthDialogContent(
                         .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
                             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                                 val localPhone = extractLocalPhoneNumber(normalizedPhone)
-                                auth.signInWithCredential(credential)
-                                    .addOnCompleteListener { task ->
-                                        if (task.isSuccessful) {
-                                            onDismiss()
-                                            navController.navigate("phoneTerm/$localPhone") {
-                                                popUpTo("login") { inclusive = true }
-                                            }
-                                        } else {
-                                            Toast.makeText(context, "로그인 실패: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                                auth.signInWithCredential(credential).addOnCompleteListener { task ->
+                                    if (task.isSuccessful) {
+                                        onDismiss()
+                                        navController.navigate("phoneTerm/$localPhone") {
+                                            popUpTo("login") { inclusive = true }
                                         }
+                                    } else {
+                                        Toast.makeText(context, "로그인 실패: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                                     }
+                                }
                             }
                             override fun onVerificationFailed(e: FirebaseException) {
                                 Toast.makeText(context, "인증 실패: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -372,7 +389,9 @@ fun PhoneAuthDialogContent(
                 label = { Text("인증 코드 입력") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(
