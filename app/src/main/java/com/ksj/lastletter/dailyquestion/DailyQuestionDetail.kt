@@ -60,7 +60,7 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
     val db = FirebaseFirestore.getInstance()
     val uid = FirebaseAuth.getInstance().currentUser?.uid
     var editMode by remember { mutableStateOf(false) }
-    var maxTextLength by remember { mutableIntStateOf(10) }
+    var maxTextLength by remember { mutableIntStateOf(300) }
     val context = LocalContext.current
 
     LaunchedEffect(docId, uid) {
