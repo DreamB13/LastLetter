@@ -3,6 +3,8 @@ package com.ksj.lastletter.dailyquestion
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -143,12 +147,12 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                                     Toast.makeText(context, "글자 수가 늘어났어요!", Toast.LENGTH_SHORT)
                                         .show()
                                 },
-                                onClickSave = { updatedText ->
+                                onClickSave = { updatedText, selectedEmotion ->
                                     val updatedData = hashMapOf(
                                         "question" to questionAnswer!!.question,
                                         "answer" to updatedText,
                                         "timestamp" to System.currentTimeMillis(),
-                                        "emotion" to questionAnswer!!.emotion
+                                        "emotion" to selectedEmotion
                                     )
 
                                     uid?.let { userId ->
@@ -159,7 +163,10 @@ fun DailyQuestionDetail(navController: NavController, docId: String) {
                                             .set(updatedData)
                                             .addOnSuccessListener {
                                                 Toast.makeText(context, "저장되었습니다.", Toast.LENGTH_SHORT).show()
-                                                questionAnswer = questionAnswer!!.copy(answer = updatedText) // UI 업데이트
+                                                questionAnswer = questionAnswer?.copy(
+                                                    answer = updatedText,
+                                                    emotion = selectedEmotion
+                                                )?.let { newQuestionAnswer -> mutableStateOf(newQuestionAnswer).value }
                                                 editMode = false
                                             }
                                             .addOnFailureListener { exception ->
@@ -250,14 +257,46 @@ fun DailyQuestionTextField(
     context: Context,
     maxTextLength: Int,
     onClick: () -> Unit,
-    onClickSave: (String) -> Unit
+    onClickSave: (String, String) -> Unit
 ) {
     var letterText by remember { mutableStateOf(questionAnswer.answer) }
     if (letterText.length == maxTextLength) {
         Toast.makeText(context, "${maxTextLength}자까지 입력할 수 있습니다.", Toast.LENGTH_SHORT)
             .show()
     }
+    // 감정 선택(6가지)
+    val emotionList = listOf("😊", "😲", "❤️", "😡", "😢", "😐")
+    var selectedEmotion by remember { mutableStateOf(emotionList[0]) }
+    var emotionMenuExpanded by remember { mutableStateOf(false) }
 
+    Box (
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .background(Color.White , RoundedCornerShape(10.dp))
+            .border(1.dp,Color.Gray, RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 5.dp)
+    ){
+        Text(
+            text = selectedEmotion,
+            modifier = Modifier
+                .clickable { emotionMenuExpanded = true }
+                .padding(4.dp)
+        )
+        DropdownMenu(
+            expanded = emotionMenuExpanded,
+            onDismissRequest = { emotionMenuExpanded = false }
+        ) {
+            emotionList.forEach { emotion ->
+                DropdownMenuItem(
+                    text = { Text(emotion) },
+                    onClick = {
+                        selectedEmotion = emotion
+                        emotionMenuExpanded = false
+                    }
+                )
+            }
+        }
+    }
     TextField(
         value = letterText,
         onValueChange = { inputText ->
@@ -292,7 +331,7 @@ fun DailyQuestionTextField(
             Text("광고 보고 600자로 늘리기", color = Color.Black)
         }
         Button(
-            onClick = { onClickSave(letterText) },
+            onClick = { onClickSave(letterText, selectedEmotion) },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xffF7AC44))
         ) {
             Text("저장하기", color = Color.Black)
