@@ -60,6 +60,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -726,13 +727,19 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 contentColor = Color.Black
                             )
                         ) {
-                            Icon(
-                                imageVector = if (recordingState == RecordingState.RECORDING)
-                                    Icons.Default.Menu else Icons.Default.PlayArrow,
-                                contentDescription = if (recordingState == RecordingState.RECORDING)
-                                    "Pause Recording" else "Resume Recording",
-                                modifier = Modifier.size(32.dp)
-                            )
+                            if (recordingState == RecordingState.RECORDING) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.pause),
+                                    contentDescription = "Pause Recording",
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.play),
+                                    contentDescription = "Resume Recording",
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
                         }
                         // 중지 버튼
                         Button(
@@ -751,10 +758,10 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 contentColor = Color.White
                             )
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
+                            Image(
+                                painter = painterResource(id = R.drawable.stop),
                                 contentDescription = "Stop Recording",
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(40.dp)
                             )
                         }
                     }
