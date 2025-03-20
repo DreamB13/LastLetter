@@ -973,7 +973,7 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                 )
                             }
 
-                            // 두 번째 옵션 - 사용자 지정 날짜
+                            // 두 번째 옵션 - 제목 직접 입력
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -988,28 +988,21 @@ fun RecordingScreen(navController: NavController, contactName: String) {
                                         selectedColor = Color(0xFFFFDCA8)
                                     )
                                 )
+
                                 // 선택되었을 때는 편집 가능한 TextField로 변경
                                 if (selectedOption == 1) {
                                     TextField(
                                         value = customDateText,
                                         onValueChange = { customDateText = it },
+                                        placeholder = { Text("제목") },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(start = 8.dp),
-                                        colors = TextFieldDefaults.colors(
-                                            focusedContainerColor = Color.White,
-                                            unfocusedContainerColor = Color.White,
-                                            focusedIndicatorColor = Color(0xFFFFDCA8),
-                                            unfocusedIndicatorColor = Color.LightGray
-                                        ),
-                                        textStyle = androidx.compose.ui.text.TextStyle(
-                                            fontSize = 16.sp,
-                                            color = Color.Black
-                                        )
+                                        shape = RoundedCornerShape(12.dp)
                                     )
                                 } else {
                                     Text(
-                                        text = customDateText,
+                                        text = "수동 저장",
                                         fontSize = 16.sp,
                                         color = Color.Black,
                                         modifier = Modifier.padding(start = 8.dp)

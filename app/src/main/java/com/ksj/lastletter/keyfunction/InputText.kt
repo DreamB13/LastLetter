@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -43,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -140,7 +142,7 @@ fun InputTextScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(3f)
+                    .weight(2.5f)
             ) {
                 TextField(
                     value = titleText,
@@ -164,7 +166,8 @@ fun InputTextScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(1f)
+                    .weight(2.5f)
+                    .padding(10.dp)
             ) {
                 Spacer(modifier = Modifier.weight(4f))
                 EmotionSelector(
@@ -178,7 +181,7 @@ fun InputTextScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(0.dp)
-                    .weight(0.6f)
+                    .weight(1f)
             ) {
                 Text(
                     "작성일 : $currentDate",
@@ -197,7 +200,7 @@ fun InputTextScreen(
             }
             Column (
                 modifier = Modifier.fillMaxSize()
-                .weight(11f)
+                .weight(10f)
             ){
                 TextField(
                     value = letterText,
@@ -308,7 +311,7 @@ fun InputTextScreen(
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(2f)
+                    .weight(1f)
             )
         }
     }
@@ -338,10 +341,10 @@ fun EmotionSelector(
             .border(1.dp, shape = RoundedCornerShape(20.dp), color = Color(0xffABABAB))
             .background(Color.White)
             .clickable { expanded = true }
-            .padding(5.dp)
+            .padding(3.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
