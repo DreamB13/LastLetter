@@ -164,7 +164,7 @@ fun InputTextScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(1f)
+                    .weight(2.5f)
             ) {
                 Spacer(modifier = Modifier.weight(4f))
                 EmotionSelector(
@@ -197,7 +197,7 @@ fun InputTextScreen(
             }
             Column (
                 modifier = Modifier.fillMaxSize()
-                .weight(11f)
+                .weight(10f)
             ){
                 TextField(
                     value = letterText,
@@ -308,7 +308,7 @@ fun InputTextScreen(
             Spacer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(2f)
+                    .weight(1f)
             )
         }
     }
