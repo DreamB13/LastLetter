@@ -360,6 +360,7 @@ fun ContextInfoCard(date: String, text: String, emotion: String = "중립") {
         modifier = Modifier
             .padding(horizontal = 16.dp)
             .fillMaxWidth()
+            .height(56.dp)
             .padding(16.dp)
             .background(
                 color = when (emotion) {
