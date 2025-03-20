@@ -4,51 +4,23 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -61,17 +33,23 @@ import com.ksj.lastletter.firebase.ContactRepository
 import com.ksj.lastletter.firebase.DocumentContact
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import okhttp3.internal.wait
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 다이얼로그 스타일 (EditContactDialog와 동일하게)
+// ─────────────────────────────────────────────────────────────────────────────
+private val DialogShape = RoundedCornerShape(20.dp)
+private val DialogBackground = Color(0xFFFFF2E3) // 연한 살구색
+private val ConfirmButtonColor = Color(0xFFB2A7FF) // 보라색 (확인)
+private val CancelButtonColor = Color.LightGray    // 취소
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun YoursMainScreen(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
-
-    // Firestore 참조
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
-    val currentUser = auth.currentUser
-    val uid = currentUser?.uid
+    val uid = auth.currentUser?.uid
 
     // 연락처 목록
     val contacts = remember { mutableStateListOf<DocumentContact>() }
@@ -81,19 +59,13 @@ fun YoursMainScreen(navController: NavController) {
     // 광고 팝업 다이얼로그
     var showAdDialog by remember { mutableStateOf(false) }
 
-    // 새 연락처 입력 필드
-    var name by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var relationship by remember { mutableStateOf("") }
-    val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
-
-    // 남은 무료 추가 횟수 (Firebase에서 로드)
+    // 남은 무료 추가 횟수
     var remainingAdds by remember { mutableStateOf(2) }
 
     // 연락처가 하나도 없을 경우 자동 팝업
     var showNoContactsDialog by remember { mutableStateOf(false) }
 
-    // 최초 로딩 시 연락처 목록 & remainingAdds 불러오기
+    // 최초 로딩
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             try {
@@ -109,11 +81,11 @@ fun YoursMainScreen(navController: NavController) {
                 if (uid != null) {
                     val doc = firestore.collection("users").document(uid).get().await()
                     if (doc.exists()) {
-                        val dbRemaining = doc.getLong("remainingAdds") // Long?
+                        val dbRemaining = doc.getLong("remainingAdds")
                         if (dbRemaining != null) {
                             remainingAdds = dbRemaining.toInt()
                         } else {
-                            // Firestore에 없는 경우 기본값 2로 저장
+                            // 없으면 2로 초기화
                             firestore.collection("users").document(uid)
                                 .set(mapOf("remainingAdds" to 2), SetOptions.merge())
                             remainingAdds = 2
@@ -131,6 +103,7 @@ fun YoursMainScreen(navController: NavController) {
         }
     }
 
+    // 화면 UI
     Scaffold(
         topBar = {
             TopAppBar(
@@ -154,7 +127,7 @@ fun YoursMainScreen(navController: NavController) {
                     }
                 },
                 actions = {
-                    // 사용자 아이콘 + 남은 추가 횟수 표시 (예: x2, x0)
+                    // 남은 추가 횟수
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             painter = painterResource(id = R.drawable.person),
@@ -177,6 +150,7 @@ fun YoursMainScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(32.dp))
+
             // 연락처 목록 표시
             contacts.forEach { documentContact ->
                 InfoCard(
@@ -242,87 +216,35 @@ fun YoursMainScreen(navController: NavController) {
         )
     }
 
-    // 사용자 추가 다이얼로그
+    // "사용자 추가" 다이얼로그 (새 디자인)
     if (showAddUserDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddUserDialog = false },
-            title = {
-                Text(
-                    text = "사용자 추가",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .background(Color(0xFFFFE4C4), shape = RoundedCornerShape(12.dp))
-                        .padding(16.dp)
-                ) {
-                    TextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("상대방 이름 (별명)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextField(
-                        value = phoneNumber,
-                        onValueChange = { phoneNumber = it },
-                        label = { Text("전화번호") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    RelationshipDropdown(
-                        relationships,
-                        selectedRelationship = relationship,
-                        onRelationshipSelected = { relationship = it }
-                    )
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    coroutineScope.launch {
-                        try {
-                            val contactRepository = ContactRepository()
-                            val newContact = Contact(name, phoneNumber, relationship)
-                            contactRepository.addContact(newContact)
-                            val updatedContacts = contactRepository.getContactsWithCoroutines()
-                            contacts.clear()
-                            contacts.addAll(updatedContacts)
+        AddUserDialog(
+            onDismiss = { showAddUserDialog = false },
+            onSave = { newContact ->
+                // Firebase에 새 연락처 저장
+                coroutineScope.launch {
+                    try {
+                        val contactRepository = ContactRepository()
+                        contactRepository.addContact(newContact)
+                        val updatedContacts = contactRepository.getContactsWithCoroutines()
+                        contacts.clear()
+                        contacts.addAll(updatedContacts)
 
-                            // 남은 횟수 감소
-                            remainingAdds--
+                        // 남은 횟수 감소
+                        remainingAdds--
 
-                            // 입력 필드 초기화
-                            name = ""
-                            phoneNumber = ""
-                            relationship = ""
-                            showAddUserDialog = false
-
-                            // 남은 횟수 Firebase에 저장
-                            if (uid != null) {
-                                FirebaseFirestore.getInstance().collection("users")
-                                    .document(uid)
-                                    .update("remainingAdds", remainingAdds)
-                                    .addOnFailureListener {
-                                        println("Error updating remainingAdds: ${it.message}")
-                                    }
-                            }
-                        } catch (e: Exception) {
-                            println("Error adding contact: ${e.message}")
+                        // 남은 횟수 Firebase에 저장
+                        if (uid != null) {
+                            FirebaseFirestore.getInstance().collection("users")
+                                .document(uid)
+                                .update("remainingAdds", remainingAdds)
+                                .addOnFailureListener {
+                                    println("Error updating remainingAdds: ${it.message}")
+                                }
                         }
+                    } catch (e: Exception) {
+                        println("Error adding contact: ${e.message}")
                     }
-                }) {
-                    Text("저장", color = Color.Black)
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    showAddUserDialog = false
-                }) {
-                    Text("취소", color = Color.Black)
                 }
             }
         )
@@ -352,8 +274,10 @@ fun YoursMainScreen(navController: NavController) {
                 }
             },
             dismissButton = {
-                Button(onClick = { showAdDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7AC44))) {
+                Button(
+                    onClick = { showAdDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF7AC44))
+                ) {
                     Text("취소", color = Color.White)
                 }
             },
@@ -363,49 +287,186 @@ fun YoursMainScreen(navController: NavController) {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AddUserDialog: "사용자 추가"를 EditContactDialog와 같은 디자인으로
+// ─────────────────────────────────────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RelationshipDropdown(
-    relationships: List<String>,
-    selectedRelationship: String,
-    onRelationshipSelected: (String) -> Unit
+fun AddUserDialog(
+    onDismiss: () -> Unit,
+    onSave: (Contact) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.fillMaxWidth()) {
-        TextField(
-            value = selectedRelationship,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("상대방과의 관계") },
-            trailingIcon = {
-                IconButton(onClick = { expanded = !expanded }) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = null
-                    )
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFFFE4C4), shape = RoundedCornerShape(12.dp))
+    // 입력 상태
+    var name by remember { mutableStateOf("") }
+    var relationship by remember { mutableStateOf("") }
+    var relationshipExpanded by remember { mutableStateOf(false) }
+
+    // 전화번호는 "010-"에서 시작, 커서도 끝에 위치
+    var phoneNumber by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = "010-",
+                selection = TextRange("010-".length)
+            )
         )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(Color(0xFFFFF4E6))
-        ) {
-            relationships.forEach { rel ->
-                DropdownMenuItem(
-                    text = { Text(text = rel, color = Color.Black) },
-                    onClick = {
-                        onRelationshipSelected(rel)
-                        expanded = false
-                    }
+    }
+
+    // 관계 목록
+    val relationships = listOf("배우자", "자녀", "부모", "연인", "형제", "친구")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = DialogShape,               // RoundedCornerShape(20.dp)
+        containerColor = DialogBackground, // Color(0xFFFFF2E3)
+        title = { Text("사용자 추가", fontSize = 18.sp, color = Color.Black) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 이름
+                Text("상대방 이름 (별명)", fontSize = 14.sp, color = Color.Black)
+                TextField(
+                    value = name,
+                    onValueChange = { newValue -> name = newValue.take(15) },
+                    placeholder = { Text("예: 남편") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.White,
+                        unfocusedIndicatorColor = Color.White,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+
+
+                    )
+
+                // 전화번호
+                Text("전화번호", fontSize = 14.sp, color = Color.Black)
+                TextField(
+                    value = phoneNumber,
+                    onValueChange = { newValue ->
+                        // 숫자만 추출
+                        val digits = newValue.text.filter { it.isDigit() }
+                        // 최대 11자리 제한
+                        val limitedDigits = digits.take(11)
+                        // 자동 하이픈
+                        val formatted = when {
+                            limitedDigits.length <= 3 -> limitedDigits
+                            limitedDigits.length <= 7 ->
+                                "${limitedDigits.substring(0, 3)}-${limitedDigits.substring(3)}"
+
+                            else ->
+                                "${limitedDigits.substring(0, 3)}-${
+                                    limitedDigits.substring(
+                                        3,
+                                        7
+                                    )
+                                }-${limitedDigits.substring(7)}"
+                        }
+                        phoneNumber = TextFieldValue(
+                            text = formatted,
+                            selection = TextRange(formatted.length)
+                        )
+                    },
+                    placeholder = { Text("예: 010-3764-9287") },
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White),
+                    colors = TextFieldDefaults.colors(
+                        focusedIndicatorColor = Color.White,
+                        unfocusedIndicatorColor = Color.White,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
                 )
+
+                // 관계
+                Text("상대방과의 관계", fontSize = 14.sp, color = Color.Black)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { relationshipExpanded = true }
+                        .background(Color.White, shape = RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (relationship.isEmpty()) "배우자" else relationship,
+                            color = Color.Black
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "드롭다운 열기",
+                            tint = Color.Black
+                        )
+                    }
+                }
+                DropdownMenu(
+                    expanded = relationshipExpanded,
+                    onDismissRequest = { relationshipExpanded = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    relationships.forEach { rel ->
+                        DropdownMenuItem(
+                            text = { Text(rel, color = Color.Black) },
+                            onClick = {
+                                relationship = rel
+                                relationshipExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // "저장" 버튼
+                Button(
+                    onClick = {
+                        val newContact = Contact(
+                            name = name,
+                            phoneNumber = phoneNumber.text,
+                            relationship = relationship
+                        )
+                        onSave(newContact)
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = ConfirmButtonColor)
+                ) {
+                    Text("저장", color = Color.White)
+                }
+                // "취소" 버튼
+                Button(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = CancelButtonColor)
+                ) {
+                    Text("취소", color = Color.White)
+                }
             }
         }
-    }
+    )
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 기존의 InfoCard, AddButton (변경 없음)
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 fun InfoCard(text: String, modifier: Modifier = Modifier) {
     Box(

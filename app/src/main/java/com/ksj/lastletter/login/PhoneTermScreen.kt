@@ -3,42 +3,27 @@ package com.ksj.lastletter.login
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -57,28 +42,34 @@ fun PhoneTermScreen(
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val firestore = FirebaseFirestore.getInstance()
-    // 전화번호 상태: TextFieldValue로 관리 (preFilledPhone이 없을 때)
+
+    // 전화번호 입력 상태
     var phoneNumberInput by remember { mutableStateOf(TextFieldValue("")) }
 
-    val tosText = stringResource(id = R.string.PRIVACY_TITLE)
-    val privacyText = stringResource(id = R.string.PRIVACY_CONTENT)
+    // string.xml에 정의된 약관/개인정보 문구
+    val tosText = stringResource(id = R.string.PRIVACY_TITLE).trim()
+    val privacyText = stringResource(id = R.string.PRIVACY_CONTENT).trim()
 
-    // effectivePhone: preFilledPhone이 있으면 그 값을 사용, 없으면 phoneNumberInput.text를 사용
+    // preFilledPhone이 있을 경우 우선 사용, 없으면 phoneNumberInput.text 사용
     val effectivePhone = if (preFilledPhone.isNotEmpty()) preFilledPhone else phoneNumberInput.text
-    // 유효성 검사: effectivePhone에서 숫자만 추출한 길이가 11이어야 함
+    // 숫자만 뽑아내서 길이가 11자리인지 확인(예: 01012345678)
     val isPhoneValid = effectivePhone.filter { it.isDigit() }.length == 11
 
+    // 체크박스 상태
     var termsChecked by remember { mutableStateOf(false) }
     var privacyChecked by remember { mutableStateOf(false) }
     var marketingChecked by remember { mutableStateOf(false) }
     var ageChecked by remember { mutableStateOf(false) }
 
+    // 다이얼로그 표시 여부
     var showTosDialog by remember { mutableStateOf(false) }
     var showPrivacyDialog by remember { mutableStateOf(false) }
 
+    // 필수 항목(이용약관, 개인정보, 만14세)에 모두 체크되어야 "다음" 버튼 활성화
     val isAllRequiredChecked = termsChecked && privacyChecked && ageChecked
     val isNextEnabled = isPhoneValid && isAllRequiredChecked
 
+    // 구글 로그인 런처
     val clientId = stringResource(id = R.string.default_web_client_id)
     val googleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -96,7 +87,6 @@ fun PhoneTermScreen(
                             firestore.collection("users")
                                 .document(uid)
                                 .set(
-                                    // preFilledPhone이 있으면 그대로, 없으면 포맷팅된 phoneNumberInput의 text 사용
                                     mapOf("phoneNumber" to formatPhoneNumber(TextFieldValue(effectivePhone)).text),
                                     com.google.firebase.firestore.SetOptions.merge()
                                 )
@@ -128,6 +118,7 @@ fun PhoneTermScreen(
         }
     }
 
+    // 메인 화면
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("약관 동의 및 전화번호 입력") })
@@ -141,6 +132,7 @@ fun PhoneTermScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(text = "전화번호를 입력해 주세요", fontSize = 18.sp)
+
             OutlinedTextField(
                 value = if (preFilledPhone.isNotEmpty()) {
                     TextFieldValue(preFilledPhone)
@@ -149,7 +141,6 @@ fun PhoneTermScreen(
                 },
                 onValueChange = { newValue ->
                     if (preFilledPhone.isEmpty()) {
-                        // newValue를 포맷팅 함수에 넣어 업데이트 (커서 위치도 자동 보정됨)
                         phoneNumberInput = formatPhoneNumber(newValue)
                     }
                 },
@@ -160,6 +151,7 @@ fun PhoneTermScreen(
                 enabled = preFilledPhone.isEmpty(),
                 modifier = Modifier.fillMaxWidth()
             )
+
             CheckItemWithContent(
                 text = "이용약관 동의 (필수)",
                 checked = termsChecked,
@@ -185,6 +177,7 @@ fun PhoneTermScreen(
                 checked = ageChecked,
                 onCheckedChange = { ageChecked = it }
             )
+
             Button(
                 onClick = {
                     if (isNextEnabled) {
@@ -205,6 +198,7 @@ fun PhoneTermScreen(
                                     Toast.makeText(context, "전화번호 업데이트 실패: ${e.message}", Toast.LENGTH_SHORT).show()
                                 }
                         } else {
+                            // 구글 로그인
                             googleLauncher.launch(
                                 GoogleSignIn.getClient(
                                     context,
@@ -227,51 +221,153 @@ fun PhoneTermScreen(
         }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // "이용 약관 동의" 커스텀 다이얼로그 (옆 폭 확대 & 가독성 개선)
+    // ─────────────────────────────────────────────────────────────
     if (showTosDialog) {
-        AlertDialog(
-            onDismissRequest = { showTosDialog = false },
-            title = { Text("LastLetter 앱 이용 약관") },
-            text = {
-                Box(
+        Dialog(onDismissRequest = { showTosDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)  // 화면 너비 95%
+                    .fillMaxHeight(0.8f)  // 화면 높이 80%
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                        .fillMaxSize()
                 ) {
-                    Text(text = tosText)
-                }
-            },
-            confirmButton = {
-                Button(onClick = { showTosDialog = false }) {
-                    Text("확인")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "이용 약관 동의",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        IconButton(onClick = { showTosDialog = false }) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Close",
+                                tint = Color.Red
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val tosLines = tosText.lines()
+
+                    // 스크롤 가능한 박스
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Column {
+                            tosLines.forEachIndexed { index, line ->
+                                // 빈 줄이면 간격만 추가
+                                if (line.isBlank()) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                } else {
+                                    // 실제 내용 줄
+                                    Text(
+                                        text = line.trim(),
+                                        fontSize = 16.sp,       // 조금 더 큰 폰트
+                                        lineHeight = 26.sp,      // 줄 간격 넉넉히
+                                        textAlign = TextAlign.Justify, // 양쪽 맞춤
+                                        color = Color.Black
+                                    )
+                                    // 문단 간 여백
+                                    if (index < tosLines.size - 1) {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // "개인정보 처리방침" 커스텀 다이얼로그 (옆 폭 확대 & 가독성 개선)
+    // ─────────────────────────────────────────────────────────────
     if (showPrivacyDialog) {
-        AlertDialog(
-            onDismissRequest = { showPrivacyDialog = false },
-            title = { Text("개인정보 처리방침") },
-            text = {
-                Box(
+        Dialog(onDismissRequest = { showPrivacyDialog = false }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .fillMaxHeight(0.8f)
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                        .fillMaxSize()
                 ) {
-                    Text(text = privacyText)
-                }
-            },
-            confirmButton = {
-                Button(onClick = { showPrivacyDialog = false }) {
-                    Text("확인")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "개인정보 처리방침",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        IconButton(onClick = { showPrivacyDialog = false }) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = "Close",
+                                tint = Color.Red
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    val privacyLines = privacyText.lines()
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Column {
+                            privacyLines.forEachIndexed { index, line ->
+                                if (line.isBlank()) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                } else {
+                                    Text(
+                                        text = line.trim(),
+                                        fontSize = 16.sp,       // 폰트 크기
+                                        lineHeight = 26.sp,      // 줄 간격
+                                        textAlign = TextAlign.Justify,
+                                        color = Color.Black
+                                    )
+                                    if (index < privacyLines.size - 1) {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// 체크박스 + "내용 보기" 버튼
+// ─────────────────────────────────────────────────────────────────
 @Composable
 fun CheckItemWithContent(
     text: String,
@@ -292,6 +388,9 @@ fun CheckItemWithContent(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// 단순 체크박스 항목
+// ─────────────────────────────────────────────────────────────────
 @Composable
 fun CheckItem(
     text: String,
@@ -308,29 +407,24 @@ fun CheckItem(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────
+// 전화번호 자동 포맷팅 함수
+// 예: "01012345678" -> "010-1234-5678"
+// ─────────────────────────────────────────────────────────────────
 fun formatPhoneNumber(input: TextFieldValue): TextFieldValue {
-    // 입력된 텍스트에서 숫자만 추출하고 최대 11자리까지 제한
     val digits = input.text.filter { it.isDigit() }
     val limited = digits.take(11)
 
-    // 자동 포맷팅:
-    // - 3자리 이하: 그대로
-    // - 4자리부터 7자리: "XXX-..." 형식
-    // - 8자리 이상: "XXX-XXXX-XXXX" 형식
     val formatted = when {
         limited.length <= 3 -> limited
         limited.length <= 7 -> "${limited.substring(0, 3)}-${limited.substring(3)}"
         else -> "${limited.substring(0, 3)}-${limited.substring(3, 7)}-${limited.substring(7)}"
     }
 
-    // 입력값의 커서 전까지의 텍스트에서 숫자 개수를 계산
     val digitsBefore = input.text.substring(0, input.selection.start)
         .filter { it.isDigit() }
         .length
-    // 새 문자열에서 커서 위치:
-    // - 3자리 이하: 그대로
-    // - 4~7자리: +1 (첫 하이픈)
-    // - 8자리 이상: +2 (두 하이픈)
+
     val newCursorPosition = when {
         digitsBefore <= 3 -> digitsBefore
         digitsBefore <= 7 -> digitsBefore + 1
