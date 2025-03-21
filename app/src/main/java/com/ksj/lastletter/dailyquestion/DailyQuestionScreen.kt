@@ -108,7 +108,7 @@ fun DailyQuestionScreen(navController: NavController) {
     val docId = "DailyQuestion_$today"
 
     // 오늘의 질문 가져오기
-    val dailyQuestions = DailyQuestion.values()
+    val dailyQuestions = DailyQuestion.entries.toTypedArray()
     val dailyQuestionIndex = today % dailyQuestions.size
     val questionText = dailyQuestions[dailyQuestionIndex].question
 
@@ -367,7 +367,7 @@ fun DailyQuestionScreen(navController: NavController) {
                     painter = painterResource(id = R.drawable.letter),
                     contentDescription = "편지쓰기",
                     modifier = Modifier
-                        .size(200.dp)
+                        .size(150.dp)
                         .clickable { navController.navigate("yoursMain") },
                 )
 
